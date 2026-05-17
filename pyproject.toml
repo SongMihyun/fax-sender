@@ -1,0 +1,28 @@
+[tool.poetry]
+name = "fax-sender"
+version = "0.1.0"
+description = "Meritz consent PDF overlay and fax automation system"
+authors = ["mimi"]
+readme = "README.md"
+package-mode = false
+
+[tool.poetry.dependencies]
+python = ">=3.11,<3.13"
+fastapi = "^0.124.0"
+uvicorn = {extras = ["standard"], version = "^0.38.0"}
+pymupdf = "^1.27.2.3"
+pillow = "^12.2.0"
+pydantic = "^2.13.3"
+pydantic-settings = "^2.12.0"
+python-dotenv = "^1.2.2"
+python-multipart = "^0.0.20"
+opencv-python = "^4.13.0.92"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^9.0.3"
+black = "^26.3.1"
+ruff = "^0.15.12"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

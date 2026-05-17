@@ -1,0 +1,126 @@
+{
+  "pages": {
+    "1": {
+      "positions": [
+        {
+          "id": "p1_check_1",
+          "type": "check",
+          "page": 1,
+          "x": 531.67,
+          "y": 305.83,
+          "width": 40,
+          "height": 30.83,
+          "unit": "pdf_point"
+        },
+        {
+          "id": "p1_check_2",
+          "type": "check",
+          "page": 1,
+          "x": 530.83,
+          "y": 350,
+          "width": 43.33,
+          "height": 44.17,
+          "unit": "pdf_point"
+        },
+        {
+          "id": "p1_check_3",
+          "type": "check",
+          "page": 1,
+          "x": 530,
+          "y": 469.17,
+          "width": 43.33,
+          "height": 34.17,
+          "unit": "pdf_point"
+        }
+      ]
+    },
+    "2": {
+      "positions": [
+        {
+          "id": "p2_check_1",
+          "type": "check",
+          "page": 2,
+          "x": 524.17,
+          "y": 93.33,
+          "width": 50,
+          "height": 40.84,
+          "unit": "pdf_point"
+        },
+        {
+          "id": "p2_check_2",
+          "type": "check",
+          "page": 2,
+          "x": 525.83,
+          "y": 148.33,
+          "width": 49.17,
+          "height": 39.16,
+          "unit": "pdf_point"
+        },
+        {
+          "id": "p2_check_3",
+          "type": "check",
+          "page": 2,
+          "x": 526.67,
+          "y": 225.83,
+          "width": 48.34,
+          "height": 40.83,
+          "unit": "pdf_point"
+        },
+        {
+          "id": "p2_check_4",
+          "type": "check",
+          "page": 2,
+          "x": 525.84,
+          "y": 691.67,
+          "width": 49.17,
+          "height": 40.84,
+          "unit": "pdf_point"
+        }
+      ]
+    },
+    "3": {
+      "positions": [
+        {
+          "id": "p3_check_1",
+          "type": "check",
+          "page": 3,
+          "x": 528.33,
+          "y": 274.17,
+          "width": 39.17,
+          "height": 37.5,
+          "unit": "pdf_point"
+        },
+        {
+          "id": "p3_check_2",
+          "type": "check",
+          "page": 3,
+          "x": 529.17,
+          "y": 325,
+          "width": 39.17,
+          "height": 35.83,
+          "unit": "pdf_point"
+        },
+        {
+          "id": "p3_check_3",
+          "type": "check",
+          "page": 3,
+          "x": 527.5,
+          "y": 426.67,
+          "width": 44.17,
+          "height": 35.83,
+          "unit": "pdf_point"
+        },
+        {
+          "id": "p3_signature_1",
+          "type": "signature",
+          "page": 3,
+          "x": 202.5,
+          "y": 464.17,
+          "width": 96.67,
+          "height": 45.83,
+          "unit": "pdf_point"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,283 @@
+{
+  "overlays": [
+    {
+      "position_id": "p1_check_1",
+      "type": "image",
+      "source_type": "check_asset",
+      "random_range": {
+        "rotation": [
+          -3,
+          3
+        ],
+        "scale": [
+          0.95,
+          1.05
+        ],
+        "offset_x": [
+          -2,
+          2
+        ],
+        "offset_y": [
+          -2,
+          2
+        ],
+        "opacity": [
+          0.85,
+          1
+        ]
+      }
+    },
+    {
+      "position_id": "p1_check_2",
+      "type": "image",
+      "source_type": "check_asset",
+      "random_range": {
+        "rotation": [
+          -3,
+          3
+        ],
+        "scale": [
+          0.95,
+          1.05
+        ],
+        "offset_x": [
+          -2,
+          2
+        ],
+        "offset_y": [
+          -2,
+          2
+        ],
+        "opacity": [
+          0.85,
+          1
+        ]
+      }
+    },
+    {
+      "position_id": "p1_check_3",
+      "type": "image",
+      "source_type": "check_asset",
+      "random_range": {
+        "rotation": [
+          -3,
+          3
+        ],
+        "scale": [
+          0.95,
+          1.05
+        ],
+        "offset_x": [
+          -2,
+          2
+        ],
+        "offset_y": [
+          -2,
+          2
+        ],
+        "opacity": [
+          0.85,
+          1
+        ]
+      }
+    },
+    {
+      "position_id": "p2_check_1",
+      "type": "image",
+      "source_type": "check_asset",
+      "random_range": {
+        "rotation": [
+          -3,
+          3
+        ],
+        "scale": [
+          0.95,
+          1.05
+        ],
+        "offset_x": [
+          -2,
+          2
+        ],
+        "offset_y": [
+          -2,
+          2
+        ],
+        "opacity": [
+          0.85,
+          1
+        ]
+      }
+    },
+    {
+      "position_id": "p2_check_2",
+      "type": "image",
+      "source_type": "check_asset",
+      "random_range": {
+        "rotation": [
+          -3,
+          3
+        ],
+        "scale": [
+          0.95,
+          1.05
+        ],
+        "offset_x": [
+          -2,
+          2
+        ],
+        "offset_y": [
+          -2,
+          2
+        ],
+        "opacity": [
+          0.85,
+          1
+        ]
+      }
+    },
+    {
+      "position_id": "p2_check_3",
+      "type": "image",
+      "source_type": "check_asset",
+      "random_range": {
+        "rotation": [
+          -3,
+          3
+        ],
+        "scale": [
+          0.95,
+          1.05
+        ],
+        "offset_x": [
+          -2,
+          2
+        ],
+        "offset_y": [
+          -2,
+          2
+        ],
+        "opacity": [
+          0.85,
+          1
+        ]
+      }
+    },
+    {
+      "position_id": "p2_check_4",
+      "type": "image",
+      "source_type": "check_asset",
+      "random_range": {
+        "rotation": [
+          -3,
+          3
+        ],
+        "scale": [
+          0.95,
+          1.05
+        ],
+        "offset_x": [
+          -2,
+          2
+        ],
+        "offset_y": [
+          -2,
+          2
+        ],
+        "opacity": [
+          0.85,
+          1
+        ]
+      }
+    },
+    {
+      "position_id": "p3_check_1",
+      "type": "image",
+      "source_type": "check_asset",
+      "random_range": {
+        "rotation": [
+          -3,
+          3
+        ],
+        "scale": [
+          0.95,
+          1.05
+        ],
+        "offset_x": [
+          -2,
+          2
+        ],
+        "offset_y": [
+          -2,
+          2
+        ],
+        "opacity": [
+          0.85,
+          1
+        ]
+      }
+    },
+    {
+      "position_id": "p3_check_2",
+      "type": "image",
+      "source_type": "check_asset",
+      "random_range": {
+        "rotation": [
+          -3,
+          3
+        ],
+        "scale": [
+          0.95,
+          1.05
+        ],
+        "offset_x": [
+          -2,
+          2
+        ],
+        "offset_y": [
+          -2,
+          2
+        ],
+        "opacity": [
+          0.85,
+          1
+        ]
+      }
+    },
+    {
+      "position_id": "p3_check_3",
+      "type": "image",
+      "source_type": "check_asset",
+      "random_range": {
+        "rotation": [
+          -3,
+          3
+        ],
+        "scale": [
+          0.95,
+          1.05
+        ],
+        "offset_x": [
+          -2,
+          2
+        ],
+        "offset_y": [
+          -2,
+          2
+        ],
+        "opacity": [
+          0.85,
+          1
+        ]
+      }
+    },
+    {
+      "position_id": "p3_signature_1",
+      "type": "text",
+      "source_type": "generated",
+      "value": "송미현"
+    }
+  ],
+  "customer_name": "유명례",
+  "manager_name": "이행란",
+  "manager_code": "721023649"
+}
