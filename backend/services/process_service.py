@@ -15,7 +15,7 @@ from backend.services.app_module_service import run_pdf_merge_engine
 from backend.services.document_service import extract_document_fields_detail, get_document
 from backend.services.file_normalizer import normalize_to_pdf
 from backend.services.kakao_sender_adapter import send_pdf_to_self_via_kakao
-from backend.services.template_merge_service import merge_template_pdf
+from backend.services.template_merge_service import extract_template_batch_fields_detail, merge_template_pdf
 from backend.models.schemas import TemplateMergeRequest
 
 
@@ -63,6 +63,41 @@ def _document_row(document_id: int):
     if not row:
         raise HTTPException(status_code=404, detail="document not found")
     return row
+
+
+def _legacy_template_exists(template_id: int | None) -> bool:
+    if template_id is None:
+        return False
+    with get_conn() as conn:
+        row = conn.execute("SELECT id FROM pdf_templates WHERE id = ?", (template_id,)).fetchone()
+    return row is not None
+
+
+def _default_legacy_template_id() -> int | None:
+    with get_conn() as conn:
+        row = conn.execute(
+            """
+            SELECT id
+            FROM pdf_templates
+            WHERE document_id IS NOT NULL
+            ORDER BY updated_at DESC, id DESC
+            LIMIT 1
+            """
+        ).fetchone()
+    return int(row["id"]) if row else None
+
+
+def _overlay_has_positions(path: Path) -> bool:
+    if not path.exists():
+        return False
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return False
+    pages = data.get("pages", {}) if isinstance(data, dict) else {}
+    if not isinstance(pages, dict):
+        return False
+    return any(page.get("positions") for page in pages.values() if isinstance(page, dict))
 
 
 def _safe_filename_part(value: Any) -> str:
@@ -153,11 +188,19 @@ def _load_extract_fields(version_row) -> list[ExtractFieldRequest]:
 def run_extract(document_id: int) -> dict[str, Any]:
     try:
         row = _document_row(document_id)
-        version = get_active_template_version(row["template_id"]) if row["template_id"] else get_active_template_version()
-        if version and not row["template_version_id"]:
-            update_document_status(document_id, row["status"], template_id=version["template_id"], template_version_id=version["id"])
-        fields = _load_extract_fields(version)
-        detail = extract_document_fields_detail(document_id, fields) if fields else {"fields": {}, "raw_fields": {}, "warnings": {}}
+        legacy_template_id = int(row["template_id"]) if _legacy_template_exists(row["template_id"]) else _default_legacy_template_id()
+        version = None if legacy_template_id else get_active_template_version(row["template_id"]) if row["template_id"] else get_active_template_version()
+
+        if legacy_template_id:
+            if row["template_id"] != legacy_template_id:
+                update_document_status(document_id, row["status"], template_id=legacy_template_id)
+            detail = extract_template_batch_fields_detail(legacy_template_id, document_id_override=document_id)
+        else:
+            if version and not row["template_version_id"]:
+                update_document_status(document_id, row["status"], template_id=version["template_id"], template_version_id=version["id"])
+            fields = _load_extract_fields(version)
+            detail = extract_document_fields_detail(document_id, fields) if fields else {"fields": {}, "raw_fields": {}, "warnings": {}}
+
         settings.extracted_dir.mkdir(parents=True, exist_ok=True)
         extracted_path = settings.extracted_dir / f"document_{document_id}_extracted.json"
         extracted_path.write_text(json.dumps(detail, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -196,11 +239,19 @@ def run_finalize(document_id: int) -> Path:
         output_path = _final_pdf_path(row)
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
-        if row["template_id"] and not row["template_version_id"]:
-            result = merge_template_pdf(int(row["template_id"]), TemplateMergeRequest(), document_id_override=document_id)
+        legacy_template_id = int(row["template_id"]) if _legacy_template_exists(row["template_id"]) else _default_legacy_template_id()
+        version = None if legacy_template_id else get_active_template_version(row["template_id"]) if row["template_id"] else get_active_template_version()
+        if version and not _overlay_has_positions(Path(version["overlay_config_path"])):
+            legacy_template_id = _default_legacy_template_id()
+            version = None
+
+        if legacy_template_id:
+            if row["template_id"] != legacy_template_id:
+                update_document_status(document_id, row["status"], template_id=legacy_template_id)
+            result = merge_template_pdf(legacy_template_id, TemplateMergeRequest(), document_id_override=document_id)
             output_path = Path(result.output_path)
+            row = _document_row(document_id)
         else:
-            version = get_active_template_version(row["template_id"]) if row["template_id"] else get_active_template_version()
             if version:
                 form_data_path = settings.extracted_dir / f"document_{document_id}_form_data.json"
                 form_data = {
