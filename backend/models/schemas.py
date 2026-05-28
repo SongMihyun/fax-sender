@@ -102,6 +102,23 @@ class JamoSignaturePreviewResponse(BaseModel):
     output_path: str
 
 
+class SignatureAssetOut(BaseModel):
+    id: str
+    category: str
+    label: str
+    filename: str
+    path: str
+    image_url: str
+    active: bool = True
+    size_bytes: int
+    created_at: str | None = None
+
+
+class SignatureAssetPatch(BaseModel):
+    active: bool | None = None
+    label: str | None = None
+
+
 class ConfigPayload(BaseModel):
     data: dict[str, Any] = Field(default_factory=dict)
 

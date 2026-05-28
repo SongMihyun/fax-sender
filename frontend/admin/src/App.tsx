@@ -31,12 +31,14 @@ import {
   type PdfTemplate,
   type ProcessPdfResponse,
   type PublicTemplate,
+  type SignatureAsset,
   createTemplate,
   createJamoAsset,
   defaultRenderStyle,
   deleteCheckAsset,
   deleteDocument,
   deleteJamoAsset,
+  deleteSignatureAsset,
   deleteTemplate,
   extractProcessPdf,
   extractTemplateFields,
@@ -46,6 +48,7 @@ import {
   listCheckAssets,
   listDocuments,
   listJamoAssets,
+  listSignatureAssets,
   listPublicTemplates,
   listTemplates,
   mergePdf,
@@ -55,16 +58,19 @@ import {
   processPdf,
   saveFormData,
   updateJamoAsset,
+  updateSignatureAsset,
   updateTemplate,
   uploadCheckSource,
   uploadDocument,
   uploadJamoSource,
+  uploadSignatureAsset,
 } from "./api/client";
 import { CheckAssetManager } from "./components/CheckAssetManager";
 import { DocumentList } from "./components/DocumentList";
 import { JamoAssetManager } from "./components/JamoAssetManager";
 import { JsonEditor } from "./components/JsonEditor";
 import { PdfCoordinateEditor } from "./components/PdfCoordinateEditor";
+import { SignatureAssetManager } from "./components/SignatureAssetManager";
 import { StatusBar } from "./components/StatusBar";
 import { TemplateForm } from "./components/TemplateForm";
 import { TemplateList } from "./components/TemplateList";
@@ -85,7 +91,7 @@ const menuItems: Array<{ id: MainPage; label: string; description: string; icon:
   { id: "checks", label: "체크 에셋 관리", description: "손체크 PNG", icon: Image },
   { id: "jamo", label: "손글씨 자모 관리", description: "자모 PNG/서명 생성", icon: FilePenLine },
   { id: "test", label: "테스트 합성", description: "템플릿 검증", icon: Play },
-  { id: "signatures", label: "서명 관리", description: "준비 중", icon: FilePenLine, disabled: true },
+  { id: "signatures", label: "서명 관리", description: "대체 서명 PNG", icon: FilePenLine },
   { id: "fax", label: "팩스 발송 관리", description: "준비 중", icon: Send, disabled: true },
   { id: "logs", label: "로그 관리", description: "준비 중", icon: History, disabled: true },
 ];
@@ -789,6 +795,7 @@ function AdminApp() {
   const [documents, setDocuments] = useState<DocumentOut[]>([]);
   const [checkAssets, setCheckAssets] = useState<CheckAsset[]>([]);
   const [jamoAssets, setJamoAssets] = useState<JamoAsset[]>([]);
+  const [signatureAssets, setSignatureAssets] = useState<SignatureAsset[]>([]);
   const [jamoSource, setJamoSource] = useState<JamoSourceUploadResponse | null>(null);
   const [jamoPreview, setJamoPreview] = useState<JamoSignaturePreviewResponse | null>(null);
   const [templates, setTemplates] = useState<PdfTemplate[]>([]);
@@ -924,6 +931,12 @@ function AdminApp() {
     });
   }, [runTask]);
 
+  const refreshSignatureAssets = useCallback(async () => {
+    await runTask("signature-assets", async () => {
+      setSignatureAssets(await listSignatureAssets());
+    });
+  }, [runTask]);
+
   useEffect(() => {
     void refreshHealth();
     void refreshDocuments();
@@ -931,7 +944,8 @@ function AdminApp() {
     void refreshFormData();
     void refreshCheckAssets();
     void refreshJamoAssets();
-  }, [refreshCheckAssets, refreshDocuments, refreshFormData, refreshHealth, refreshJamoAssets, refreshTemplates]);
+    void refreshSignatureAssets();
+  }, [refreshCheckAssets, refreshDocuments, refreshFormData, refreshHealth, refreshJamoAssets, refreshSignatureAssets, refreshTemplates]);
 
   async function handleUpload(file: File) {
     await runTask("upload", async () => {
@@ -1077,6 +1091,33 @@ function AdminApp() {
         type: preview.success ? "success" : "info",
         message: preview.success ? "자모 조합 서명 미리보기를 생성했습니다." : `부족한 자모가 있습니다: ${preview.missing_jamo.join(", ")}`,
       });
+    });
+  }
+
+  async function handleUploadSignatureAsset(file: File, category: string, label: string) {
+    await runTask("upload-signature-asset", async () => {
+      await uploadSignatureAsset(file, category, label);
+      setSignatureAssets(await listSignatureAssets());
+      setNotice({ type: "success", message: "대체 서명을 저장했습니다." });
+    });
+  }
+
+  async function handleDeleteSignatureAsset(asset: SignatureAsset) {
+    const confirmed = window.confirm(`"${asset.label}" 서명을 삭제할까요?`);
+    if (!confirmed) return;
+
+    await runTask("delete-signature-asset", async () => {
+      await deleteSignatureAsset(asset.id);
+      setSignatureAssets(await listSignatureAssets());
+      setNotice({ type: "success", message: "대체 서명을 삭제했습니다." });
+    });
+  }
+
+  async function handleToggleSignatureAsset(asset: SignatureAsset) {
+    await runTask("toggle-signature-asset", async () => {
+      await updateSignatureAsset(asset.id, { active: !asset.active });
+      setSignatureAssets(await listSignatureAssets());
+      setNotice({ type: "success", message: asset.active ? "대체 서명을 비활성 처리했습니다." : "대체 서명을 활성 처리했습니다." });
     });
   }
 
@@ -1411,6 +1452,19 @@ function AdminApp() {
     );
   }
 
+  function renderSignatureAssetPage() {
+    return (
+      <SignatureAssetManager
+        assets={signatureAssets}
+        isBusy={isBusy}
+        onDelete={handleDeleteSignatureAsset}
+        onRefresh={refreshSignatureAssets}
+        onToggleActive={handleToggleSignatureAsset}
+        onUpload={handleUploadSignatureAsset}
+      />
+    );
+  }
+
   function renderResultPanel() {
     return (
       <section className="panel result-panel">
@@ -1543,7 +1597,7 @@ function AdminApp() {
     if (activePage === "checks") return renderCheckAssetPage();
     if (activePage === "jamo") return renderJamoAssetPage();
     if (activePage === "test") return renderTestPage();
-    if (activePage === "signatures") return renderPlaceholderPage("서명 관리");
+    if (activePage === "signatures") return renderSignatureAssetPage();
     if (activePage === "fax") return renderPlaceholderPage("팩스 발송 관리");
     return renderPlaceholderPage("로그 관리");
   }

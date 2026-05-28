@@ -11,6 +11,7 @@ from backend.api.admin_templates import router as admin_templates_router
 from backend.api.check_assets import router as check_assets_router
 from backend.api.process import router as process_router
 from backend.api.jamo_assets import router as jamo_assets_router
+from backend.api.signature_assets import router as signature_assets_router
 from backend.core.settings import settings
 from backend.database.db import init_db
 
@@ -36,6 +37,7 @@ def create_app() -> FastAPI:
     app.include_router(templates_router, prefix="/api/templates", tags=["templates"])
     app.include_router(check_assets_router, prefix="/api/check-assets", tags=["check-assets"])
     app.include_router(jamo_assets_router, prefix="/api/admin/jamo", tags=["admin-jamo"])
+    app.include_router(signature_assets_router, prefix="/api/admin/signatures", tags=["admin-signatures"])
     app.include_router(admin_templates_router, prefix="/api/admin", tags=["admin-templates"])
     app.include_router(process_router, prefix="/api/process", tags=["process"])
     app.include_router(configs_router, prefix="/api/configs", tags=["configs"])

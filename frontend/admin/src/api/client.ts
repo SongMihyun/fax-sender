@@ -158,6 +158,18 @@ export type JamoSignaturePreviewResponse = {
   output_path: string;
 };
 
+export type SignatureAsset = {
+  id: string;
+  category: string;
+  label: string;
+  filename: string;
+  path: string;
+  image_url: string;
+  active: boolean;
+  size_bytes: number;
+  created_at: string | null;
+};
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000";
 
 async function parseResponse<T>(response: Response): Promise<T> {
@@ -233,6 +245,10 @@ function normalizeJamoAsset(asset: JamoAsset): JamoAsset {
 
 function normalizeJamoPreview(preview: JamoSignaturePreviewResponse): JamoSignaturePreviewResponse {
   return { ...preview, preview_url: new URL(preview.preview_url, API_BASE_URL).toString() };
+}
+
+function normalizeSignatureAsset(asset: SignatureAsset): SignatureAsset {
+  return { ...asset, image_url: new URL(asset.image_url, API_BASE_URL).toString() };
 }
 
 export async function listCheckAssets(): Promise<CheckAsset[]> {
@@ -337,6 +353,49 @@ export async function previewJamoSignature(customerName: string): Promise<JamoSi
         body: JSON.stringify({ customer_name: customerName, mode: "jamo_composed_signature" }),
       }),
     ),
+  );
+}
+
+export async function listSignatureAssets(category?: string): Promise<SignatureAsset[]> {
+  const params = new URLSearchParams();
+  if (category) params.set("category", category);
+  const query = params.toString();
+  const assets = await parseResponse<SignatureAsset[]>(await fetch(`${API_BASE_URL}/api/admin/signatures${query ? `?${query}` : ""}`));
+  return assets.map(normalizeSignatureAsset);
+}
+
+export async function uploadSignatureAsset(file: File, category: string, label: string): Promise<SignatureAsset> {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("category", category);
+  formData.append("label", label);
+  return normalizeSignatureAsset(
+    await parseResponse<SignatureAsset>(
+      await fetch(`${API_BASE_URL}/api/admin/signatures`, {
+        method: "POST",
+        body: formData,
+      }),
+    ),
+  );
+}
+
+export async function updateSignatureAsset(assetId: string, payload: { active?: boolean; label?: string }): Promise<SignatureAsset> {
+  return normalizeSignatureAsset(
+    await parseResponse<SignatureAsset>(
+      await fetch(`${API_BASE_URL}/api/admin/signatures/${encodeURIComponent(assetId)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }),
+    ),
+  );
+}
+
+export async function deleteSignatureAsset(assetId: string): Promise<{ status: string }> {
+  return parseResponse<{ status: string }>(
+    await fetch(`${API_BASE_URL}/api/admin/signatures/${encodeURIComponent(assetId)}`, {
+      method: "DELETE",
+    }),
   );
 }
 

@@ -415,6 +415,35 @@ def _create_signature_image(text: str, profile: dict[str, Any]) -> Path:
     return tmp_path
 
 
+def _is_english_signature_candidate(value: str) -> bool:
+    text = (value or "").strip()
+    return bool(text) and re.fullmatch(r"[A-Za-z\s.'-]+", text) is not None
+
+
+def _needs_saved_signature_fallback(customer_name: str, used_jamo: list[str], missing_jamo: list[str]) -> tuple[bool, str]:
+    if _is_english_signature_candidate(customer_name):
+        return True, "english"
+    if missing_jamo:
+        return True, "missing_jamo"
+    if any(item.startswith(("placeholder:", "substitute:")) for item in used_jamo):
+        return True, "incomplete_jamo"
+    return False, ""
+
+
+def _saved_signature_or_error(reason: str, profile: dict[str, Any]) -> Path:
+    from backend.services.signature_asset_service import pick_fallback_signature
+
+    path = pick_fallback_signature(category=reason)
+    if path is None:
+        raise HTTPException(
+            status_code=500,
+            detail="저장된 대체 서명이 없습니다. /admin 서명 관리에서 fallback 서명을 먼저 업로드하세요.",
+        )
+    profile["saved_signature_fallback_reason"] = reason
+    profile["saved_signature_fallback_path"] = str(path)
+    return path
+
+
 def _overlay_for_position(position: dict[str, Any], form_data: dict[str, Any], profile: dict[str, Any]) -> dict[str, Any] | None:
     position_type = position.get("type")
     position_id = position.get("id")
@@ -430,12 +459,20 @@ def _overlay_for_position(position: dict[str, Any], form_data: dict[str, Any], p
             "check_stroke_profile": profile.get("check_stroke_profile", "normal"),
         }
     if position_type == "signature":
+        customer_name = str(form_data.get("customer_name", ""))
         try:
             from backend.services.jamo_asset_service import create_jamo_signature_image
 
-            signature_path, used_jamo, missing_jamo = create_jamo_signature_image(str(form_data.get("customer_name", "")), profile)
-            profile["generated_signature_text"] = str(form_data.get("customer_name", ""))
-            profile["generated_signature_mode"] = "jamo_composed_signature"
+            signature_path, used_jamo, missing_jamo = create_jamo_signature_image(customer_name, profile)
+            needs_fallback, fallback_reason = _needs_saved_signature_fallback(customer_name, used_jamo, missing_jamo)
+            if needs_fallback:
+                if settings.tmp_dir in signature_path.parents and signature_path.exists():
+                    signature_path.unlink()
+                signature_path = _saved_signature_or_error(fallback_reason, profile)
+                profile["generated_signature_mode"] = "saved_signature_fallback"
+            else:
+                profile["generated_signature_mode"] = "jamo_composed_signature"
+            profile["generated_signature_text"] = customer_name
             profile["signature_generation_mode"] = "jamo_composed_signature"
             profile["jamo_used"] = used_jamo
             profile["jamo_missing"] = missing_jamo
@@ -447,10 +484,30 @@ def _overlay_for_position(position: dict[str, Any], form_data: dict[str, Any], p
                 "random_range": random_range,
             }
         except HTTPException:
+            if _is_english_signature_candidate(customer_name):
+                signature_path = _saved_signature_or_error("english", profile)
+                profile["generated_signature_text"] = customer_name
+                profile["generated_signature_mode"] = "saved_signature_fallback"
+                return {
+                    "position_id": position_id,
+                    "type": "image",
+                    "source_type": "generated_signature",
+                    "image_path": str(signature_path),
+                    "random_range": random_range,
+                }
             raise
         except Exception as error:
             profile["jamo_signature_error"] = str(error)
-        raise HTTPException(status_code=500, detail=f"자모 조합 서명 생성에 실패했습니다: {profile.get('jamo_signature_error', 'unknown')}")
+        signature_path = _saved_signature_or_error("fallback", profile)
+        profile["generated_signature_text"] = customer_name
+        profile["generated_signature_mode"] = "saved_signature_fallback"
+        return {
+            "position_id": position_id,
+            "type": "image",
+            "source_type": "generated_signature",
+            "image_path": str(signature_path),
+            "random_range": random_range,
+        }
     if position_type == "date":
         value = form_data.get("date") or datetime.now().strftime("%Y.%m.%d")
     elif position_type == "name":
