@@ -13,6 +13,7 @@ OutputBaseFilename=FaxSenderAutoProcessor-Setup
 Compression=lzma
 SolidCompression=yes
 PrivilegesRequired=lowest
+SetupIconFile=..\auto_processor\assets\faxsender.ico
 
 [Files]
 Source: "..\dist\FaxSenderAutoProcessor\*"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion
@@ -41,8 +42,8 @@ begin
 end;
 
 [Icons]
-Name: "{autoprograms}\{#AppName}"; Filename: "{app}\{#AppExeName}"
-Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExeName}"; Tasks: desktopicon
+Name: "{autoprograms}\{#AppName}"; Filename: "{app}\{#AppExeName}"; IconFilename: "{app}\{#AppExeName}"
+Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExeName}"; IconFilename: "{app}\{#AppExeName}"; Tasks: desktopicon
 
 [Run]
 Filename: "{app}\{#AppExeName}"; Parameters: "--watch-root ""{code:GetWatchRoot}"""; Description: "{#AppName} 실행"; Flags: nowait postinstall skipifsilent
