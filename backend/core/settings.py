@@ -1,6 +1,13 @@
+import os
 from pathlib import Path
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+def _default_root_dir() -> Path:
+    configured = os.environ.get("FAX_SENDER_ROOT")
+    return Path(configured).expanduser().resolve() if configured else Path(__file__).resolve().parents[2]
 
 
 class Settings(BaseSettings):
@@ -9,13 +16,32 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     app_name: str = "fax-sender-backend"
-    root_dir: Path = Path(__file__).resolve().parents[2]
+    root_dir: Path = Field(default_factory=_default_root_dir)
     host: str = "127.0.0.1"
-    port: int = 8000
+    port: int = 8791
     cors_origins: list[str] = [
-        "http://127.0.0.1:5173",
-        "http://localhost:5173",
+        "http://127.0.0.1:5791",
+        "http://127.0.0.1:5792",
+        "http://127.0.0.1:5793",
+        "http://127.0.0.1:5794",
+        "http://127.0.0.1:5795",
+        "http://127.0.0.1:5796",
+        "http://127.0.0.1:5797",
+        "http://127.0.0.1:5891",
+        "http://127.0.0.1:5892",
+        "http://localhost:5791",
+        "http://localhost:5792",
+        "http://localhost:5793",
+        "http://localhost:5794",
+        "http://localhost:5795",
+        "http://localhost:5796",
+        "http://localhost:5797",
+        "http://localhost:5891",
+        "http://localhost:5892",
     ]
+    kakao_my_name: str = ""
+    kakao_speed_mode: str = "normal"
+    tesseract_cmd: str = ""
 
     @property
     def backend_dir(self) -> Path:
@@ -142,6 +168,10 @@ class Settings(BaseSettings):
         return self.root_dir / "shared" / "assets" / "jamo"
 
     @property
+    def tessdata_dir(self) -> Path:
+        return self.root_dir / "tools" / "tessdata"
+
+    @property
     def db_path(self) -> Path:
         return self.storage_dir / "app.sqlite3"
 
@@ -152,6 +182,10 @@ class Settings(BaseSettings):
     @property
     def form_data_path(self) -> Path:
         return self.configs_dir / "form_data.json"
+
+    @property
+    def active_template_path(self) -> Path:
+        return self.configs_dir / "active_template.json"
 
 
 settings = Settings()

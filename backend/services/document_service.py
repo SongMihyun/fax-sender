@@ -1,3 +1,4 @@
+import os
 import shutil
 import re
 import uuid
@@ -5,12 +6,30 @@ from pathlib import Path
 
 from fastapi import HTTPException, UploadFile
 from fastapi.responses import Response
+import cv2
 import fitz
+import numpy as np
+import pytesseract
+from PIL import Image, ImageOps
 
 from backend.core.settings import settings
 from backend.database.db import get_conn, now_iso
 from backend.models.schemas import DocumentMetadata, DocumentOut, DocumentPageInfo, DocumentPreview, ExtractFieldRequest
 from backend.services.file_normalizer import normalize_to_pdf
+
+
+def _configure_tesseract() -> None:
+    if settings.tesseract_cmd:
+        pytesseract.pytesseract.tesseract_cmd = settings.tesseract_cmd
+    else:
+        default_cmd = Path("C:/Program Files/Tesseract-OCR/tesseract.exe")
+        if default_cmd.exists():
+            pytesseract.pytesseract.tesseract_cmd = str(default_cmd)
+    if settings.tessdata_dir.exists() and not os.environ.get("TESSDATA_PREFIX"):
+        os.environ["TESSDATA_PREFIX"] = str(settings.tessdata_dir)
+
+
+_configure_tesseract()
 
 
 def _file_url(path: str) -> str | None:
@@ -126,6 +145,32 @@ def delete_document(document_id: int) -> dict[str, str]:
     return {"status": "deleted"}
 
 
+def cleanup_process_document(document_id: int) -> None:
+    """Drop a one-off /process, /fax upload once its result PDF has been produced.
+
+    These uploads only exist to feed a single merge; unlike admin-registered
+    template source PDFs, they don't need to stick around in 문서 관리 afterward.
+    """
+    with get_conn() as conn:
+        row = conn.execute("SELECT * FROM documents WHERE id = ?", (document_id,)).fetchone()
+        if not row:
+            return
+        used = conn.execute("SELECT id FROM pdf_templates WHERE document_id = ? LIMIT 1", (document_id,)).fetchone()
+        if used:
+            return
+        conn.execute("DELETE FROM documents WHERE id = ?", (document_id,))
+
+    for path_str in {row["stored_original_path"], row["normalized_pdf_path"], row["file_path"]}:
+        if not path_str:
+            continue
+        path = Path(path_str)
+        try:
+            if path.exists() and settings.storage_dir in path.parents:
+                path.unlink()
+        except OSError:
+            pass
+
+
 def get_document_preview(document_id: int) -> DocumentPreview:
     document = get_document(document_id)
     file_path = Path(document.file_path)
@@ -183,9 +228,150 @@ def extract_text_from_pdf_region(pdf_path: Path, field: ExtractFieldRequest) -> 
     return re.sub(r"\s+", " ", text).strip()
 
 
-def extract_text_with_ocr_fallback(pdf_path: Path, field: ExtractFieldRequest) -> str:
-    # OCR fallback hook. 1차 구현은 PDF text layer 추출만 수행한다.
-    return extract_text_from_pdf_region(pdf_path, field)
+def _ocr_crop(pdf_path: Path, field: ExtractFieldRequest, zoom: float, padding: float) -> Image.Image | None:
+    with fitz.open(pdf_path) as pdf:
+        if field.page < 1 or field.page > pdf.page_count:
+            return None
+        page = pdf[field.page - 1]
+        page_rect = page.rect
+        # Pad the box before clipping: a tight box can shave off a character's top stroke
+        # (e.g. ㅎ's top dash), which is enough for Tesseract to misread it as a different jamo (ㅇ).
+        rect = fitz.Rect(
+            max(page_rect.x0, field.x - padding),
+            max(page_rect.y0, field.y - padding),
+            min(page_rect.x1, field.x + field.width + padding),
+            min(page_rect.y1, field.y + field.height + padding),
+        )
+        pixmap = page.get_pixmap(matrix=fitz.Matrix(zoom, zoom), clip=rect, alpha=False)
+        image = Image.frombytes("RGB", (pixmap.width, pixmap.height), pixmap.samples)
+    return ImageOps.autocontrast(image.convert("L"))
+
+
+OCR_LOW_CONFIDENCE_THRESHOLD = 60.0
+HIEUT_INDEX = 18  # ㅎ in the 19-way initial-consonant table
+IEUNG_INDEX = 11  # ㅇ
+
+
+def _swap_hieut_ieung_initial(char: str) -> str | None:
+    """Swap a syllable's initial between ㅎ and ㅇ (e.g. 현<->연), else None if not applicable."""
+    code = ord(char) - 0xAC00
+    if code < 0 or code > 11171:
+        return None
+    initial_index, remainder = divmod(code, 588)
+    if initial_index == HIEUT_INDEX:
+        swapped_index = IEUNG_INDEX
+    elif initial_index == IEUNG_INDEX:
+        swapped_index = HIEUT_INDEX
+    else:
+        return None
+    return chr(0xAC00 + swapped_index * 588 + remainder)
+
+
+def _has_hieut_cap_stroke(char_crop: Image.Image) -> bool:
+    """Tell ㅎ from ㅇ by looking for ㅎ's short cap stroke above the circle.
+
+    ㅎ draws as a horizontal stroke sitting apart from the circle below it, which shows up as a
+    sharp ink-density spike in the top ~40% of the glyph followed by a clear dip. Ieung's circle
+    just curves smoothly into view with no such isolated spike.
+    """
+    if char_crop.width < 4 or char_crop.height < 4:
+        return False
+    arr = np.array(char_crop.convert("L"))
+    _, thresh = cv2.threshold(arr, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+    row_density = (thresh > 0).sum(axis=1) / max(1, thresh.shape[1])
+
+    top_row_count = max(1, int(len(row_density) * 0.4))
+    top_rows = row_density[:top_row_count]
+    peak_index = int(np.argmax(top_rows))
+    peak = top_rows[peak_index]
+    lead_in = min(top_rows[:peak_index]) if peak_index > 0 else 0.0
+    trail_out = min(top_rows[peak_index + 1 :]) if peak_index + 1 < len(top_rows) else peak
+    return (peak - lead_in) > 0.45 and (peak - trail_out) > 0.3
+
+
+def _correct_hieut_ieung_confusion(image: Image.Image, text: str, data: dict) -> str:
+    """Re-check ambiguous initial syllables against the actual pixels.
+
+    Tesseract sometimes reads ㅎ as ㅇ (or vice versa) even when the top stroke is visible.
+    Every Hangul syllable is inspected independently, so a ㅎ can be corrected at the beginning,
+    middle, or end of a person's name; it is not tied to the character's position in the string.
+    """
+    hangul_chars = [char for char in text if "가" <= char <= "힣"]
+    if not hangul_chars:
+        return text
+
+    boxes = [
+        (left, top, width, height)
+        for word, left, top, width, height in zip(data["text"], data["left"], data["top"], data["width"], data["height"])
+        if any("가" <= char <= "힣" for char in word)
+    ]
+    if not boxes:
+        return text
+
+    x0 = min(b[0] for b in boxes)
+    y0 = min(b[1] for b in boxes)
+    x1 = max(b[0] + b[2] for b in boxes)
+    y1 = max(b[1] + b[3] for b in boxes)
+    if x1 <= x0 or y1 <= y0:
+        return text
+
+    char_width = (x1 - x0) / len(hangul_chars)
+    corrected = list(hangul_chars)
+    changed = False
+    for index, char in enumerate(hangul_chars):
+        swapped = _swap_hieut_ieung_initial(char)
+        if swapped is None:
+            continue
+        left = int(x0 + index * char_width)
+        right = int(x0 + (index + 1) * char_width)
+        char_crop = image.crop((max(0, left), y0, min(image.width, right), y1))
+        should_be_hieut = _has_hieut_cap_stroke(char_crop)
+        is_hieut = (ord(char) - 0xAC00) // 588 == HIEUT_INDEX
+        if should_be_hieut != is_hieut:
+            corrected[index] = swapped
+            changed = True
+
+    if not changed:
+        return text
+
+    corrected_iter = iter(corrected)
+    return "".join(next(corrected_iter) if "가" <= char <= "힣" else char for char in text)
+
+
+def _ocr_pdf_region(pdf_path: Path, field: ExtractFieldRequest, zoom: float = 6.0, padding: float = 4.0) -> tuple[str, float | None]:
+    """OCR a single field's box, used when the PDF has no text layer there (scanned form).
+
+    Returns (text, worst_word_confidence). Confidence is None when nothing was recognized.
+    The *minimum* per-word confidence is used (not the average) so a single misread character
+    (e.g. one wrong jamo in a name) isn't diluted away by other, easier words in the same box.
+    """
+    image = _ocr_crop(pdf_path, field, zoom, padding)
+    if image is None:
+        return "", None
+    try:
+        text = pytesseract.image_to_string(image, lang="kor+eng", config="--psm 7")
+        data = pytesseract.image_to_data(image, lang="kor+eng", config="--psm 7", output_type=pytesseract.Output.DICT)
+    except pytesseract.TesseractNotFoundError:
+        return "", None
+    text = re.sub(r"\s+", " ", text).strip()
+    if not text:
+        return "", None
+    confidences = [float(conf) for word, conf in zip(data["text"], data["conf"]) if word.strip() and str(conf) not in ("-1", "")]
+    min_confidence = min(confidences) if confidences else None
+    # A name can contain one confidently misread syllable while the whole OCR
+    # word reports high confidence. This glyph check changes only the known
+    # ㅎ/ㅇ ambiguity, so run it for every OCR result.
+    text = _correct_hieut_ieung_confusion(image, text, data)
+    return text, min_confidence
+
+
+def extract_text_with_ocr_fallback(pdf_path: Path, field: ExtractFieldRequest) -> tuple[str, float | None]:
+    """Returns (text, ocr_confidence). ocr_confidence is None when the text layer was used (no OCR needed)."""
+    text_layer_result = extract_text_from_pdf_region(pdf_path, field)
+    if text_layer_result:
+        return text_layer_result, None
+    # No text under this box -> likely a scanned/image-only PDF, fall back to OCR.
+    return _ocr_pdf_region(pdf_path, field)
 
 
 def extract_after_second_slash(text: str) -> tuple[str, str | None]:
@@ -244,7 +430,7 @@ def extract_document_fields_detail(document_id: int, fields: list[ExtractFieldRe
     for field in fields:
         if not field.field_key:
             continue
-        raw_text = extract_text_with_ocr_fallback(pdf_path, field)
+        raw_text, _ocr_confidence = extract_text_with_ocr_fallback(pdf_path, field)
         clean_text, warning = sanitize_extracted_field(field.field_key, raw_text)
         raw_fields[field.field_key] = raw_text
         clean_fields[field.field_key] = clean_text
