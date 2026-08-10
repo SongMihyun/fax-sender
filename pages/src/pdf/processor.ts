@@ -63,9 +63,9 @@ function pickRandom<T>(items: T[]): T | null {
 }
 
 function checkAssetStyle(darkness: CheckDarkness) {
-  if (darkness === "light") return { alphaMultiplier: 0.82, dilationRadius: 0, imageOpacity: 0.84 };
-  if (darkness === "normal") return { alphaMultiplier: 1.12, dilationRadius: 1, imageOpacity: 0.96 };
-  return { alphaMultiplier: 1.45, dilationRadius: 2, imageOpacity: 1 };
+  if (darkness === "light") return { alphaMultiplier: 0.82, dilationRadius: 0, imageOpacity: 0.84, inkMultiplier: 1 };
+  if (darkness === "normal") return { alphaMultiplier: 1.12, dilationRadius: 1, imageOpacity: 0.96, inkMultiplier: 0.72 };
+  return { alphaMultiplier: 1.8, dilationRadius: 2, imageOpacity: 1, inkMultiplier: 0.42 };
 }
 
 /**
@@ -109,9 +109,9 @@ async function enhanceCheckAsset(bytes: ArrayBuffer, darkness: CheckDarkness): P
         if (bestIndex < 0 || highestAlpha === 0) continue;
 
         const targetIndex = (y * canvas.width + x) * 4;
-        result.data[targetIndex] = source.data[bestIndex];
-        result.data[targetIndex + 1] = source.data[bestIndex + 1];
-        result.data[targetIndex + 2] = source.data[bestIndex + 2];
+        result.data[targetIndex] = Math.round(source.data[bestIndex] * style.inkMultiplier);
+        result.data[targetIndex + 1] = Math.round(source.data[bestIndex + 1] * style.inkMultiplier);
+        result.data[targetIndex + 2] = Math.round(source.data[bestIndex + 2] * style.inkMultiplier);
         result.data[targetIndex + 3] = Math.min(255, Math.round(highestAlpha * style.alphaMultiplier));
       }
     }
@@ -159,7 +159,10 @@ function convertCanvasToFaxGrayscale(canvas: HTMLCanvasElement) {
   const pixels = imageData.data;
   for (let index = 0; index < pixels.length; index += 4) {
     const gray = pixels[index] * 0.299 + pixels[index + 1] * 0.587 + pixels[index + 2] * 0.114;
-    const faxGray = gray > 238 ? 255 : Math.max(0, Math.min(255, (gray - 18) * 0.82));
+    // Keep clean paper white while making ink distinctly darker. This gives
+    // the browser result the same crisp, high-contrast character as the
+    // desktop renderer without drawing synthetic strokes.
+    const faxGray = gray > 244 ? 255 : Math.max(0, Math.min(255, (gray - 10) * 0.72));
     pixels[index] = faxGray;
     pixels[index + 1] = faxGray;
     pixels[index + 2] = faxGray;
@@ -169,7 +172,7 @@ function convertCanvasToFaxGrayscale(canvas: HTMLCanvasElement) {
 }
 
 async function renderGrayscalePages(inputBytes: ArrayBuffer): Promise<GrayscalePage[]> {
-  const renderScale = 2;
+  const renderScale = 2.5;
   const loadingTask = pdfjs.getDocument({ data: new Uint8Array(inputBytes.slice(0)) });
   const sourcePdf = await loadingTask.promise;
   const pages: GrayscalePage[] = [];

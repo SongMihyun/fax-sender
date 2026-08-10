@@ -250,6 +250,8 @@ def _ocr_crop(pdf_path: Path, field: ExtractFieldRequest, zoom: float, padding: 
 OCR_LOW_CONFIDENCE_THRESHOLD = 60.0
 HIEUT_INDEX = 18  # ㅎ in the 19-way initial-consonant table
 IEUNG_INDEX = 11  # ㅇ
+YEO_MEDIAL_INDEX = 6  # ㅕ
+YE_MEDIAL_INDEX = 7  # ㅖ
 
 
 def _swap_hieut_ieung_initial(char: str) -> str | None:
@@ -265,6 +267,20 @@ def _swap_hieut_ieung_initial(char: str) -> str | None:
     else:
         return None
     return chr(0xAC00 + swapped_index * 588 + remainder)
+
+
+def _medial_index(char: str) -> int | None:
+    code = ord(char) - 0xAC00
+    if code < 0 or code > 11171:
+        return None
+    return (code % 588) // 28
+
+
+def _replace_medial(char: str, target_medial_index: int) -> str:
+    code = ord(char) - 0xAC00
+    initial_index, remainder = divmod(code, 588)
+    final_index = remainder % 28
+    return chr(0xAC00 + initial_index * 588 + target_medial_index * 28 + final_index)
 
 
 def _has_hieut_cap_stroke(char_crop: Image.Image) -> bool:
@@ -312,6 +328,44 @@ def _has_hieut_cap_stroke(char_crop: Image.Image) -> bool:
     )
 
 
+def _has_ye_second_vertical_stem(char_crop: Image.Image) -> bool:
+    """Detect ㅖ's extra right-hand vertical stem, distinguishing it from ㅕ.
+
+    This check is only used after a glyph is already identified as ㅎ. It keeps
+    the correction conservative: an OCR result such as ``여`` becomes ``혜``
+    only when the image contains both the ㅎ cap and the extra ㅖ stem.
+    """
+    if char_crop.width < 10 or char_crop.height < 10:
+        return False
+    arr = np.array(char_crop.convert("L"))
+    _, threshold = cv2.threshold(arr, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+    ink = threshold > 0
+    height, width = ink.shape
+    start = int(width * 0.52)
+
+    stem_columns: list[int] = []
+    for x in range(start, width):
+        column = ink[:, x]
+        longest = 0
+        current = 0
+        for pixel in column:
+            if pixel:
+                current += 1
+                longest = max(longest, current)
+            else:
+                current = 0
+        if longest >= height * 0.38:
+            stem_columns.append(x)
+
+    groups = 0
+    previous = -2
+    for column in stem_columns:
+        if column > previous + 1:
+            groups += 1
+        previous = column
+    return groups >= 2
+
+
 def _correct_hieut_ieung_confusion(image: Image.Image, text: str, data: dict) -> str:
     """Re-check ambiguous initial syllables against the actual pixels.
 
@@ -350,8 +404,11 @@ def _correct_hieut_ieung_confusion(image: Image.Image, text: str, data: dict) ->
         char_crop = image.crop((max(0, left), y0, min(image.width, right), y1))
         should_be_hieut = _has_hieut_cap_stroke(char_crop)
         is_hieut = (ord(char) - 0xAC00) // 588 == HIEUT_INDEX
-        if should_be_hieut != is_hieut:
-            corrected[index] = swapped
+        candidate = swapped if should_be_hieut != is_hieut else char
+        if should_be_hieut and _medial_index(candidate) == YEO_MEDIAL_INDEX and _has_ye_second_vertical_stem(char_crop):
+            candidate = _replace_medial(candidate, YE_MEDIAL_INDEX)
+        if candidate != char:
+            corrected[index] = candidate
             changed = True
 
     if not changed:

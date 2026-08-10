@@ -211,12 +211,13 @@ def _default_render_style(render_style: dict[str, Any]) -> dict[str, Any]:
         "keep_style_consistency_per_pdf": True,
         "fax_effect": True,
         "fax_effect_config": {
-            "dpi": 170,
-            "rotation": [-0.35, 0.35],
-            "contrast": 1.18,
-            "brightness": 1.02,
-            "noise": 7,
-            "blur": 0.18,
+            "dpi": 200,
+            "rotation": [-0.2, 0.2],
+            "contrast": 1.42,
+            "brightness": 0.96,
+            "noise": 3,
+            "blur": 0,
+            "jpeg_quality": 92,
         },
         "random_range": {
             "rotation": [-3, 3],
@@ -235,7 +236,11 @@ def _pick_style_profile(render_style: dict[str, Any]) -> dict[str, Any]:
     seed = random.randint(100000, 999999)
     rng = random.Random(seed)
     pen_texture = rng.choice(style.get("pen_textures") or ["thin_ballpen"])
-    check_profile = rng.choice(style.get("check_stroke_profiles") or ["normal"])
+    # Consent marks must remain legible after fax conversion, so do not randomly
+    # select a light stroke profile for production output.
+    # Use the original handwritten check asset, but keep its ink reliably
+    # legible after grayscale/fax conversion instead of randomly fading it.
+    check_profile = "ultra_dark"
     modes = style.get("signature_generation_modes") or ["full_korean_name"]
     profile = {
         "style_seed": seed,
@@ -430,18 +435,37 @@ def _needs_saved_signature_fallback(customer_name: str, used_jamo: list[str], mi
     return False, ""
 
 
-def _saved_signature_or_error(reason: str, profile: dict[str, Any]) -> Path:
+def _record_signature_warning(profile: dict[str, Any], customer_name: str, reason: str, message: str) -> None:
+    warnings = profile.setdefault("signature_fallback_warnings", [])
+    if isinstance(warnings, list):
+        warnings.append({"customer_name": customer_name, "reason": reason, "message": message})
+
+
+def _saved_signature_or_none(reason: str, profile: dict[str, Any]) -> Path | None:
     from backend.services.signature_asset_service import pick_fallback_signature
 
     path = pick_fallback_signature(category=reason)
     if path is None:
-        raise HTTPException(
-            status_code=500,
-            detail="저장된 대체 서명이 없습니다. /admin 서명 관리에서 fallback 서명을 먼저 업로드하세요.",
-        )
+        return None
     profile["saved_signature_fallback_reason"] = reason
     profile["saved_signature_fallback_path"] = str(path)
     return path
+
+
+def _saved_signature_or_error(reason: str, profile: dict[str, Any]) -> Path:
+    path = _saved_signature_or_none(reason, profile)
+    if path is not None:
+        return path
+    raise HTTPException(
+        status_code=500,
+        detail="저장된 대체 서명이 없습니다. /admin 서명 관리에서 fallback 서명을 먼저 업로드하세요.",
+    )
+
+
+def _text_signature_fallback(customer_name: str, profile: dict[str, Any]) -> Path:
+    text = _signature_text(customer_name, profile)
+    profile["generated_signature_mode"] = "text_signature_fallback"
+    return _create_signature_image(text, profile)
 
 
 def _overlay_for_position(position: dict[str, Any], form_data: dict[str, Any], profile: dict[str, Any]) -> dict[str, Any] | None:
@@ -457,6 +481,7 @@ def _overlay_for_position(position: dict[str, Any], form_data: dict[str, Any], p
             "source_type": "check_asset",
             "random_range": random_range,
             "check_stroke_profile": profile.get("check_stroke_profile", "normal"),
+            "check_ink_opacity": 1.0,
         }
     if position_type == "signature":
         customer_name = str(form_data.get("customer_name", ""))
@@ -466,10 +491,20 @@ def _overlay_for_position(position: dict[str, Any], form_data: dict[str, Any], p
             signature_path, used_jamo, missing_jamo = create_jamo_signature_image(customer_name, profile)
             needs_fallback, fallback_reason = _needs_saved_signature_fallback(customer_name, used_jamo, missing_jamo)
             if needs_fallback:
-                if settings.tmp_dir in signature_path.parents and signature_path.exists():
-                    signature_path.unlink()
-                signature_path = _saved_signature_or_error(fallback_reason, profile)
-                profile["generated_signature_mode"] = "saved_signature_fallback"
+                saved_signature_path = _saved_signature_or_none(fallback_reason, profile)
+                if saved_signature_path is not None:
+                    if settings.tmp_dir in signature_path.parents and signature_path.exists():
+                        signature_path.unlink()
+                    signature_path = saved_signature_path
+                    profile["generated_signature_mode"] = "saved_signature_fallback"
+                else:
+                    _record_signature_warning(
+                        profile,
+                        customer_name,
+                        fallback_reason,
+                        "saved fallback signature is missing; generated signature was used",
+                    )
+                    profile["generated_signature_mode"] = "generated_signature_without_saved_fallback"
             else:
                 profile["generated_signature_mode"] = "jamo_composed_signature"
             profile["generated_signature_text"] = customer_name
@@ -485,9 +520,17 @@ def _overlay_for_position(position: dict[str, Any], form_data: dict[str, Any], p
             }
         except HTTPException:
             if _is_english_signature_candidate(customer_name):
-                signature_path = _saved_signature_or_error("english", profile)
+                signature_path = _saved_signature_or_none("english", profile)
+                if signature_path is None:
+                    _record_signature_warning(
+                        profile,
+                        customer_name,
+                        "english",
+                        "saved english fallback signature is missing; text signature was used",
+                    )
+                    signature_path = _text_signature_fallback(customer_name, profile)
                 profile["generated_signature_text"] = customer_name
-                profile["generated_signature_mode"] = "saved_signature_fallback"
+                profile.setdefault("generated_signature_mode", "saved_signature_fallback")
                 return {
                     "position_id": position_id,
                     "type": "image",
@@ -498,9 +541,17 @@ def _overlay_for_position(position: dict[str, Any], form_data: dict[str, Any], p
             raise
         except Exception as error:
             profile["jamo_signature_error"] = str(error)
-        signature_path = _saved_signature_or_error("fallback", profile)
+        signature_path = _saved_signature_or_none("fallback", profile)
+        if signature_path is None:
+            _record_signature_warning(
+                profile,
+                customer_name,
+                "fallback",
+                "saved fallback signature is missing; text signature was used",
+            )
+            signature_path = _text_signature_fallback(customer_name, profile)
         profile["generated_signature_text"] = customer_name
-        profile["generated_signature_mode"] = "saved_signature_fallback"
+        profile.setdefault("generated_signature_mode", "saved_signature_fallback")
         return {
             "position_id": position_id,
             "type": "image",
@@ -512,6 +563,24 @@ def _overlay_for_position(position: dict[str, Any], form_data: dict[str, Any], p
         value = form_data.get("date") or datetime.now().strftime("%Y.%m.%d")
     elif position_type == "name":
         value = form_data.get("customer_name") or form_data.get("name") or ""
+        from backend.services.jamo_asset_service import create_jamo_signature_image
+
+        name_profile = {
+            **profile,
+            "style_seed": int(profile.get("style_seed", 0)) + 817,
+            "base_opacity": 0.92,
+            "base_rotation_range": [-1.2, 1.2],
+        }
+        name_path, used_jamo, missing_jamo = create_jamo_signature_image(str(value), name_profile)
+        profile["generated_name_mode"] = "jamo_composed_name"
+        profile["name_jamo_used"] = used_jamo
+        profile["name_jamo_missing"] = missing_jamo
+        return {
+            "position_id": position_id,
+            "type": "image",
+            "source_type": "generated_name",
+            "image_path": str(name_path),
+        }
     else:
         return None
     return {"position_id": position_id, "type": "text", "source_type": "text", "value": value, "fontsize": 11}
@@ -606,7 +675,17 @@ def merge_template_pdf(template_id: int, payload: TemplateMergeRequest, document
         if profile.get("fax_effect"):
             result_path = apply_fax_effect(Path(result_path), profile.get("fax_effect_config", {}), seed=int(profile["style_seed"]))
     finally:
-        _cleanup_tmp_paths([overlay_path, form_data_path, *(Path(overlay["image_path"]) for overlay in overlays if overlay.get("source_type") == "generated_signature" and overlay.get("image_path"))])
+        _cleanup_tmp_paths(
+            [
+                overlay_path,
+                form_data_path,
+                *(
+                    Path(overlay["image_path"])
+                    for overlay in overlays
+                    if overlay.get("source_type") in {"generated_signature", "generated_name"} and overlay.get("image_path")
+                ),
+            ]
+        )
     with get_conn() as conn:
         conn.execute(
             """

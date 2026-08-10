@@ -147,6 +147,7 @@ def _prepare_check_asset_image(image_path: Path, x: float, y: float, width: floa
     offset_x = random.uniform(float(offset_x_min), float(offset_x_max))
     offset_y = random.uniform(float(offset_y_min), float(offset_y_max))
     opacity = random.uniform(float(opacity_min), float(opacity_max))
+    opacity = max(opacity, float(overlay.get("check_ink_opacity", 0)))
     rotation = random.uniform(float(rotation_min), float(rotation_max))
 
     next_width = width * scale
@@ -173,11 +174,30 @@ def _apply_check_stroke_profile(image: Image.Image, profile: str) -> Image.Image
         return image
     alpha = image.getchannel("A")
     if profile == "thick":
-        alpha = ImageEnhance.Brightness(alpha).enhance(1.08)
+        alpha = alpha.filter(ImageFilter.MaxFilter(3))
+        alpha = ImageEnhance.Brightness(alpha).enhance(1.22)
     elif profile == "extra_thick":
-        alpha = ImageEnhance.Brightness(alpha).enhance(1.14)
+        alpha = alpha.filter(ImageFilter.MaxFilter(5))
+        alpha = ImageEnhance.Brightness(alpha).enhance(1.5)
+    elif profile == "ultra_dark":
+        # Preserve the user's sampled check shape. Only its existing ink is
+        # darkened and slightly reinforced for legibility after fax rendering.
+        alpha = alpha.filter(ImageFilter.MaxFilter(5))
+        alpha = ImageEnhance.Brightness(alpha).enhance(1.8)
+        red, green, blue, _ = image.split()
+        image = Image.merge(
+            "RGBA",
+            (
+                ImageEnhance.Brightness(red).enhance(0.42),
+                ImageEnhance.Brightness(green).enhance(0.42),
+                ImageEnhance.Brightness(blue).enhance(0.42),
+                alpha,
+            ),
+        )
+        return image
     elif profile == "dark":
-        alpha = ImageEnhance.Brightness(alpha).enhance(1.18)
+        alpha = alpha.filter(ImageFilter.MaxFilter(3))
+        alpha = ImageEnhance.Brightness(alpha).enhance(1.35)
     elif profile == "light":
         alpha = ImageEnhance.Brightness(alpha).enhance(0.72)
     image.putalpha(alpha)

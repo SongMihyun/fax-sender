@@ -12,11 +12,11 @@
     { "id": "p1_check_2", "type": "check", "page": 1, "x": 542, "y": 166.67, "width": 24.67, "height": 19.33, "unit": "pdf_point", "sourceType": "check_asset" },
     { "id": "p1_check_3", "type": "check", "page": 1, "x": 546.67, "y": 198.67, "width": 21.33, "height": 22.67, "unit": "pdf_point", "sourceType": "check_asset" },
     { "id": "p1_check_4", "type": "check", "page": 1, "x": 541.33, "y": 332.67, "width": 28, "height": 23.33, "unit": "pdf_point", "sourceType": "check_asset" },
-    { "id": "p1_check_5", "type": "check", "page": 1, "x": 541.33, "y": 358, "width": 28.67, "height": 24.67, "unit": "pdf_point", "sourceType": "check_asset" },
-    { "id": "p1_check_6", "type": "check", "page": 1, "x": 542, "y": 390, "width": 28.67, "height": 32, "unit": "pdf_point", "sourceType": "check_asset" },
-    { "id": "p1_check_7", "type": "check", "page": 1, "x": 540.67, "y": 540.67, "width": 26, "height": 26.67, "unit": "pdf_point", "sourceType": "check_asset" },
-    { "id": "p1_check_8", "type": "check", "page": 1, "x": 539.33, "y": 570.67, "width": 32, "height": 23.33, "unit": "pdf_point", "sourceType": "check_asset" },
-    { "id": "p1_check_9", "type": "check", "page": 1, "x": 541.33, "y": 606, "width": 29.33, "height": 32.67, "unit": "pdf_point", "sourceType": "check_asset" },
+    { "id": "p1_check_5", "type": "check", "page": 1, "x": 542, "y": 362.67, "width": 22.67, "height": 20.67, "unit": "pdf_point", "sourceType": "check_asset" },
+    { "id": "p1_check_6", "type": "check", "page": 1, "x": 544.67, "y": 395.33, "width": 20, "height": 20, "unit": "pdf_point", "sourceType": "check_asset" },
+    { "id": "p1_check_7", "type": "check", "page": 1, "x": 544, "y": 540.67, "width": 20, "height": 23.34, "unit": "pdf_point", "sourceType": "check_asset" },
+    { "id": "p1_check_8", "type": "check", "page": 1, "x": 545.33, "y": 570.67, "width": 20.67, "height": 20.66, "unit": "pdf_point", "sourceType": "check_asset" },
+    { "id": "p1_check_9", "type": "check", "page": 1, "x": 545.99, "y": 613.34, "width": 18.66, "height": 18.67, "unit": "pdf_point", "sourceType": "check_asset" },
     { "id": "p1_name_1", "type": "name", "field": "customerName", "page": 1, "x": 466, "y": 665.33, "width": 74.67, "height": 28.66, "unit": "pdf_point" },
     { "id": "p1_signature_1", "type": "signature", "field": "customerName", "page": 1, "x": 543.34, "y": 664.67, "width": 60.67, "height": 33.33, "unit": "pdf_point", "sourceType": "generated_signature" }
   ]
