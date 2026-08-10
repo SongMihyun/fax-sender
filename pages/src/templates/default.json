@@ -1,0 +1,167 @@
+{
+  "id": "meritz-consent",
+  "name": "메리츠_고객동의",
+  "description": "로컬 관리자 템플릿에서 추출한 고객동의서 3장 좌표입니다.",
+  "coordinateOrigin": "top_left",
+  "groupPageCount": 3,
+  "positions": [
+    {
+      "id": "p1_check_1",
+      "type": "check",
+      "page": 1,
+      "x": 527.83,
+      "y": 297.33,
+      "width": 43.33,
+      "height": 35.33,
+      "unit": "pdf_point",
+      "sourceType": "check_asset"
+    },
+    {
+      "id": "p1_check_2",
+      "type": "check",
+      "page": 1,
+      "x": 525.17,
+      "y": 364,
+      "width": 46.67,
+      "height": 26,
+      "unit": "pdf_point",
+      "sourceType": "check_asset"
+    },
+    {
+      "id": "p1_check_3",
+      "type": "check",
+      "page": 1,
+      "x": 532.5,
+      "y": 470,
+      "width": 41.33,
+      "height": 30.67,
+      "unit": "pdf_point",
+      "sourceType": "check_asset"
+    },
+    {
+      "id": "p2_check_1",
+      "type": "check",
+      "page": 2,
+      "x": 530.5,
+      "y": 92.67,
+      "width": 37.33,
+      "height": 34,
+      "unit": "pdf_point",
+      "sourceType": "check_asset"
+    },
+    {
+      "id": "p2_check_2",
+      "type": "check",
+      "page": 2,
+      "x": 531.17,
+      "y": 156,
+      "width": 36,
+      "height": 29.33,
+      "unit": "pdf_point",
+      "sourceType": "check_asset"
+    },
+    {
+      "id": "p2_check_3",
+      "type": "check",
+      "page": 2,
+      "x": 536.5,
+      "y": 228,
+      "width": 37.33,
+      "height": 32.67,
+      "unit": "pdf_point",
+      "sourceType": "check_asset"
+    },
+    {
+      "id": "p2_check_4",
+      "type": "check",
+      "page": 2,
+      "x": 533.17,
+      "y": 702,
+      "width": 34.67,
+      "height": 30,
+      "unit": "pdf_point",
+      "sourceType": "check_asset"
+    },
+    {
+      "id": "p3_check_1",
+      "type": "check",
+      "page": 3,
+      "x": 532.5,
+      "y": 282,
+      "width": 36,
+      "height": 32.67,
+      "unit": "pdf_point",
+      "sourceType": "check_asset"
+    },
+    {
+      "id": "p3_check_2",
+      "type": "check",
+      "page": 3,
+      "x": 538.5,
+      "y": 329.33,
+      "width": 36,
+      "height": 34.67,
+      "unit": "pdf_point",
+      "sourceType": "check_asset"
+    },
+    {
+      "id": "p3_check_3",
+      "type": "check",
+      "page": 3,
+      "x": 529.17,
+      "y": 427.33,
+      "width": 39.33,
+      "height": 34,
+      "unit": "pdf_point",
+      "sourceType": "check_asset"
+    },
+    {
+      "id": "p3_signature_1",
+      "type": "signature",
+      "field": "customerName",
+      "page": 3,
+      "x": 213.83,
+      "y": 476.67,
+      "width": 70.67,
+      "height": 34,
+      "unit": "pdf_point",
+      "sourceType": "generated_signature"
+    },
+    {
+      "id": "p3_manager_name_source_1",
+      "type": "extract_text",
+      "field": "managerName",
+      "fieldKey": "manager_name",
+      "page": 3,
+      "x": 257.17,
+      "y": 776.66,
+      "width": 198,
+      "height": 23.33,
+      "unit": "pdf_point"
+    },
+    {
+      "id": "p3_manager_code_source_1",
+      "type": "extract_text",
+      "field": "managerCode",
+      "fieldKey": "manager_code",
+      "page": 3,
+      "x": 257.17,
+      "y": 776,
+      "width": 199.33,
+      "height": 22.67,
+      "unit": "pdf_point"
+    },
+    {
+      "id": "p3_customer_name_source_1",
+      "type": "extract_text",
+      "field": "customerName",
+      "fieldKey": "customer_name",
+      "page": 3,
+      "x": 142,
+      "y": 481,
+      "width": 44,
+      "height": 18,
+      "unit": "pdf_point"
+    }
+  ]
+}

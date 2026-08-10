@@ -1,0 +1,892 @@
+[
+    {
+        "category":  "final",
+        "jamo":  "ㄱ",
+        "path":  "final/ㄱ/final_giyeok_20260510_195314_001.png"
+    },
+    {
+        "category":  "final",
+        "jamo":  "ㄱ",
+        "path":  "final/ㄱ/final_giyeok_20260510_195314_002.png"
+    },
+    {
+        "category":  "final",
+        "jamo":  "ㄱ",
+        "path":  "final/ㄱ/final_giyeok_20260510_195314_003.png"
+    },
+    {
+        "category":  "final",
+        "jamo":  "ㄴ",
+        "path":  "final/ㄴ/final_nieun_20260510_195320_001.png"
+    },
+    {
+        "category":  "final",
+        "jamo":  "ㄴ",
+        "path":  "final/ㄴ/final_nieun_20260510_195320_002.png"
+    },
+    {
+        "category":  "final",
+        "jamo":  "ㄴ",
+        "path":  "final/ㄴ/final_nieun_20260510_195320_003.png"
+    },
+    {
+        "category":  "final",
+        "jamo":  "ㄷ",
+        "path":  "final/ㄷ/final_digeut_20260510_195326_001.png"
+    },
+    {
+        "category":  "final",
+        "jamo":  "ㄷ",
+        "path":  "final/ㄷ/final_digeut_20260510_195326_002.png"
+    },
+    {
+        "category":  "final",
+        "jamo":  "ㄷ",
+        "path":  "final/ㄷ/final_digeut_20260510_195326_003.png"
+    },
+    {
+        "category":  "final",
+        "jamo":  "ㄹ",
+        "path":  "final/ㄹ/final_rieul_20260510_195331_001.png"
+    },
+    {
+        "category":  "final",
+        "jamo":  "ㄹ",
+        "path":  "final/ㄹ/final_rieul_20260510_195331_002.png"
+    },
+    {
+        "category":  "final",
+        "jamo":  "ㄹ",
+        "path":  "final/ㄹ/final_rieul_20260510_195331_003.png"
+    },
+    {
+        "category":  "final",
+        "jamo":  "ㄹ",
+        "path":  "final/ㄹ/final_rieul_20260510_195331_004.png"
+    },
+    {
+        "category":  "final",
+        "jamo":  "ㄹ",
+        "path":  "final/ㄹ/final_rieul_20260510_195331_005.png"
+    },
+    {
+        "category":  "final",
+        "jamo":  "ㅁ",
+        "path":  "final/ㅁ/final_mieum_20260510_195338_001.png"
+    },
+    {
+        "category":  "final",
+        "jamo":  "ㅁ",
+        "path":  "final/ㅁ/final_mieum_20260510_195338_002.png"
+    },
+    {
+        "category":  "final",
+        "jamo":  "ㅁ",
+        "path":  "final/ㅁ/final_mieum_20260510_195338_003.png"
+    },
+    {
+        "category":  "final",
+        "jamo":  "ㅂ",
+        "path":  "final/ㅂ/final_bieup_20260510_195342_001.png"
+    },
+    {
+        "category":  "final",
+        "jamo":  "ㅂ",
+        "path":  "final/ㅂ/final_bieup_20260510_195342_002.png"
+    },
+    {
+        "category":  "final",
+        "jamo":  "ㅂ",
+        "path":  "final/ㅂ/final_bieup_20260510_195342_003.png"
+    },
+    {
+        "category":  "final",
+        "jamo":  "ㅅ",
+        "path":  "final/ㅅ/final_siot_20260510_195348_001.png"
+    },
+    {
+        "category":  "final",
+        "jamo":  "ㅅ",
+        "path":  "final/ㅅ/final_siot_20260510_195348_002.png"
+    },
+    {
+        "category":  "final",
+        "jamo":  "ㅅ",
+        "path":  "final/ㅅ/final_siot_20260510_195348_003.png"
+    },
+    {
+        "category":  "final",
+        "jamo":  "ㅅ",
+        "path":  "final/ㅅ/final_siot_20260510_195348_004.png"
+    },
+    {
+        "category":  "final",
+        "jamo":  "ㅇ",
+        "path":  "final/ㅇ/final_ieung_20260510_195355_001.png"
+    },
+    {
+        "category":  "final",
+        "jamo":  "ㅇ",
+        "path":  "final/ㅇ/final_ieung_20260510_195355_002.png"
+    },
+    {
+        "category":  "final",
+        "jamo":  "ㅇ",
+        "path":  "final/ㅇ/final_ieung_20260510_195355_003.png"
+    },
+    {
+        "category":  "final",
+        "jamo":  "ㅇ",
+        "path":  "final/ㅇ/final_ieung_20260510_195355_004.png"
+    },
+    {
+        "category":  "final",
+        "jamo":  "ㅈ",
+        "path":  "final/ㅈ/final_jieut_20260510_195401_001.png"
+    },
+    {
+        "category":  "final",
+        "jamo":  "ㅈ",
+        "path":  "final/ㅈ/final_jieut_20260510_195401_002.png"
+    },
+    {
+        "category":  "final",
+        "jamo":  "ㅈ",
+        "path":  "final/ㅈ/final_jieut_20260510_195401_003.png"
+    },
+    {
+        "category":  "final",
+        "jamo":  "ㅊ",
+        "path":  "final/ㅊ/final_chieut_20260510_195408_001.png"
+    },
+    {
+        "category":  "final",
+        "jamo":  "ㅊ",
+        "path":  "final/ㅊ/final_chieut_20260510_195408_003.png"
+    },
+    {
+        "category":  "final",
+        "jamo":  "ㅊ",
+        "path":  "final/ㅊ/final_chieut_20260510_195408_004.png"
+    },
+    {
+        "category":  "final",
+        "jamo":  "ㅋ",
+        "path":  "final/ㅋ/final_kieuk_20260510_195424_001.png"
+    },
+    {
+        "category":  "final",
+        "jamo":  "ㅋ",
+        "path":  "final/ㅋ/final_kieuk_20260510_195424_002.png"
+    },
+    {
+        "category":  "final",
+        "jamo":  "ㅋ",
+        "path":  "final/ㅋ/final_kieuk_20260510_195424_003.png"
+    },
+    {
+        "category":  "final",
+        "jamo":  "ㅋ",
+        "path":  "final/ㅋ/final_kieuk_20260510_195424_004.png"
+    },
+    {
+        "category":  "final",
+        "jamo":  "ㅌ",
+        "path":  "final/ㅌ/final_tieut_20260510_195430_001.png"
+    },
+    {
+        "category":  "final",
+        "jamo":  "ㅌ",
+        "path":  "final/ㅌ/final_tieut_20260510_195430_002.png"
+    },
+    {
+        "category":  "final",
+        "jamo":  "ㅌ",
+        "path":  "final/ㅌ/final_tieut_20260510_195430_003.png"
+    },
+    {
+        "category":  "final",
+        "jamo":  "ㅍ",
+        "path":  "final/ㅍ/final_pieup_20260510_195435_001.png"
+    },
+    {
+        "category":  "final",
+        "jamo":  "ㅍ",
+        "path":  "final/ㅍ/final_pieup_20260510_195435_002.png"
+    },
+    {
+        "category":  "final",
+        "jamo":  "ㅍ",
+        "path":  "final/ㅍ/final_pieup_20260510_195435_003.png"
+    },
+    {
+        "category":  "final",
+        "jamo":  "ㅍ",
+        "path":  "final/ㅍ/final_pieup_20260510_195435_004.png"
+    },
+    {
+        "category":  "final",
+        "jamo":  "ㅎ",
+        "path":  "final/ㅎ/final_hieut_20260510_195439_001.png"
+    },
+    {
+        "category":  "final",
+        "jamo":  "ㅎ",
+        "path":  "final/ㅎ/final_hieut_20260510_195439_002.png"
+    },
+    {
+        "category":  "final",
+        "jamo":  "ㅎ",
+        "path":  "final/ㅎ/final_hieut_20260510_195439_003.png"
+    },
+    {
+        "category":  "final",
+        "jamo":  "ㅎ",
+        "path":  "final/ㅎ/final_hieut_20260510_195439_006.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㄱ",
+        "path":  "initial/ㄱ/initial_giyeok_20260510_194345_001.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㄱ",
+        "path":  "initial/ㄱ/initial_giyeok_20260510_194345_002.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㄱ",
+        "path":  "initial/ㄱ/initial_giyeok_20260510_194345_003.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㄱ",
+        "path":  "initial/ㄱ/initial_giyeok_20260510_194345_004.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㄱ",
+        "path":  "initial/ㄱ/initial_giyeok_20260510_194345_005.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㄱ",
+        "path":  "initial/ㄱ/initial_giyeok_20260510_194345_006.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㄱ",
+        "path":  "initial/ㄱ/initial_giyeok_20260510_194345_007.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㄱ",
+        "path":  "initial/ㄱ/initial_giyeok_20260510_194345_008.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㄱ",
+        "path":  "initial/ㄱ/initial_giyeok_20260510_194345_009.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㄱ",
+        "path":  "initial/ㄱ/initial_giyeok_20260510_194345_010.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㄱ",
+        "path":  "initial/ㄱ/initial_giyeok_20260510_194345_011.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㄴ",
+        "path":  "initial/ㄴ/initial_nieun_20260510_194412_001.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㄴ",
+        "path":  "initial/ㄴ/initial_nieun_20260510_194412_002.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㄴ",
+        "path":  "initial/ㄴ/initial_nieun_20260510_194412_003.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㄴ",
+        "path":  "initial/ㄴ/initial_nieun_20260510_194412_004.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㄴ",
+        "path":  "initial/ㄴ/initial_nieun_20260510_194412_005.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㄴ",
+        "path":  "initial/ㄴ/initial_nieun_20260510_194412_006.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㄴ",
+        "path":  "initial/ㄴ/initial_nieun_20260510_194412_007.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㄷ",
+        "path":  "initial/ㄷ/initial_digeut_20260510_194431_001.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㄷ",
+        "path":  "initial/ㄷ/initial_digeut_20260510_194431_002.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㄷ",
+        "path":  "initial/ㄷ/initial_digeut_20260510_194431_003.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㄷ",
+        "path":  "initial/ㄷ/initial_digeut_20260510_194431_004.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㄷ",
+        "path":  "initial/ㄷ/initial_digeut_20260510_194431_005.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㄷ",
+        "path":  "initial/ㄷ/initial_digeut_20260510_194431_006.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㄷ",
+        "path":  "initial/ㄷ/initial_digeut_20260510_194431_007.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㄹ",
+        "path":  "initial/ㄹ/initial_rieul_20260510_194441_001.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㄹ",
+        "path":  "initial/ㄹ/initial_rieul_20260510_194441_002.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㄹ",
+        "path":  "initial/ㄹ/initial_rieul_20260510_194441_003.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㄹ",
+        "path":  "initial/ㄹ/initial_rieul_20260510_194441_004.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㄹ",
+        "path":  "initial/ㄹ/initial_rieul_20260510_194441_005.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㄹ",
+        "path":  "initial/ㄹ/initial_rieul_20260510_194441_006.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㄹ",
+        "path":  "initial/ㄹ/initial_rieul_20260510_194441_007.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅁ",
+        "path":  "initial/ㅁ/initial_mieum_20260510_194450_001.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅁ",
+        "path":  "initial/ㅁ/initial_mieum_20260510_194450_002.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅁ",
+        "path":  "initial/ㅁ/initial_mieum_20260510_194450_003.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅁ",
+        "path":  "initial/ㅁ/initial_mieum_20260510_194450_004.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅁ",
+        "path":  "initial/ㅁ/initial_mieum_20260510_194450_005.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅁ",
+        "path":  "initial/ㅁ/initial_mieum_20260510_194450_006.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅁ",
+        "path":  "initial/ㅁ/initial_mieum_20260510_194450_007.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅂ",
+        "path":  "initial/ㅂ/initial_bieup_20260510_194509_001.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅂ",
+        "path":  "initial/ㅂ/initial_bieup_20260510_194509_002.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅂ",
+        "path":  "initial/ㅂ/initial_bieup_20260510_194509_003.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅂ",
+        "path":  "initial/ㅂ/initial_bieup_20260510_194509_004.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅂ",
+        "path":  "initial/ㅂ/initial_bieup_20260510_194509_005.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅂ",
+        "path":  "initial/ㅂ/initial_bieup_20260510_194509_006.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅂ",
+        "path":  "initial/ㅂ/initial_bieup_20260510_194509_007.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅅ",
+        "path":  "initial/ㅅ/initial_siot_20260510_194527_001.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅅ",
+        "path":  "initial/ㅅ/initial_siot_20260510_194527_002.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅅ",
+        "path":  "initial/ㅅ/initial_siot_20260510_194527_003.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅅ",
+        "path":  "initial/ㅅ/initial_siot_20260510_194527_004.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅅ",
+        "path":  "initial/ㅅ/initial_siot_20260510_194527_005.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅅ",
+        "path":  "initial/ㅅ/initial_siot_20260510_194527_006.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅅ",
+        "path":  "initial/ㅅ/initial_siot_20260510_194527_007.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅇ",
+        "path":  "initial/ㅇ/initial_ieung_20260510_194541_001.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅇ",
+        "path":  "initial/ㅇ/initial_ieung_20260510_194541_002.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅇ",
+        "path":  "initial/ㅇ/initial_ieung_20260510_194541_003.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅇ",
+        "path":  "initial/ㅇ/initial_ieung_20260510_194541_004.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅇ",
+        "path":  "initial/ㅇ/initial_ieung_20260510_194541_005.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅇ",
+        "path":  "initial/ㅇ/initial_ieung_20260510_194541_006.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅇ",
+        "path":  "initial/ㅇ/initial_ieung_20260510_194541_007.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅈ",
+        "path":  "initial/ㅈ/initial_jieut_20260510_194548_001.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅈ",
+        "path":  "initial/ㅈ/initial_jieut_20260510_194548_002.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅈ",
+        "path":  "initial/ㅈ/initial_jieut_20260510_194548_003.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅈ",
+        "path":  "initial/ㅈ/initial_jieut_20260510_194548_004.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅈ",
+        "path":  "initial/ㅈ/initial_jieut_20260510_194548_005.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅈ",
+        "path":  "initial/ㅈ/initial_jieut_20260510_194548_006.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅈ",
+        "path":  "initial/ㅈ/initial_jieut_20260510_194548_007.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅈ",
+        "path":  "initial/ㅈ/initial_jieut_20260510_194556_014.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅈ",
+        "path":  "initial/ㅈ/initial_jieut_20260510_194556_015.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅈ",
+        "path":  "initial/ㅈ/initial_jieut_20260510_194556_017.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅊ",
+        "path":  "initial/ㅊ/initial_chieut_20260510_194608_001.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅊ",
+        "path":  "initial/ㅊ/initial_chieut_20260510_194608_002.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅊ",
+        "path":  "initial/ㅊ/initial_chieut_20260510_194608_005.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅊ",
+        "path":  "initial/ㅊ/initial_chieut_20260510_194608_006.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅊ",
+        "path":  "initial/ㅊ/initial_chieut_20260510_194726_006.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅋ",
+        "path":  "initial/ㅋ/initial_kieuk_20260510_194930_001.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅋ",
+        "path":  "initial/ㅋ/initial_kieuk_20260510_194930_002.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅋ",
+        "path":  "initial/ㅋ/initial_kieuk_20260510_194930_003.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅋ",
+        "path":  "initial/ㅋ/initial_kieuk_20260510_194930_004.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅋ",
+        "path":  "initial/ㅋ/initial_kieuk_20260510_194930_005.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅋ",
+        "path":  "initial/ㅋ/initial_kieuk_20260510_194930_006.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅌ",
+        "path":  "initial/ㅌ/initial_tieut_20260510_194938_001.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅌ",
+        "path":  "initial/ㅌ/initial_tieut_20260510_194938_002.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅌ",
+        "path":  "initial/ㅌ/initial_tieut_20260510_194938_003.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅌ",
+        "path":  "initial/ㅌ/initial_tieut_20260510_194938_004.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅌ",
+        "path":  "initial/ㅌ/initial_tieut_20260510_194938_005.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅌ",
+        "path":  "initial/ㅌ/initial_tieut_20260510_194938_006.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅌ",
+        "path":  "initial/ㅌ/initial_tieut_20260510_194938_007.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅍ",
+        "path":  "initial/ㅍ/initial_pieup_20260510_194915_001.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅍ",
+        "path":  "initial/ㅍ/initial_pieup_20260510_194915_002.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅍ",
+        "path":  "initial/ㅍ/initial_pieup_20260510_194915_003.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅍ",
+        "path":  "initial/ㅍ/initial_pieup_20260510_194915_004.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅍ",
+        "path":  "initial/ㅍ/initial_pieup_20260510_194915_005.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅍ",
+        "path":  "initial/ㅍ/initial_pieup_20260510_194915_006.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅎ",
+        "path":  "initial/ㅎ/initial_hieut_20260510_194945_001.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅎ",
+        "path":  "initial/ㅎ/initial_hieut_20260510_194945_003.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅎ",
+        "path":  "initial/ㅎ/initial_hieut_20260510_194945_004.png"
+    },
+    {
+        "category":  "initial",
+        "jamo":  "ㅎ",
+        "path":  "initial/ㅎ/initial_hieut_20260510_194945_005.png"
+    },
+    {
+        "category":  "medial",
+        "jamo":  "ㅏ",
+        "path":  "medial/ㅏ/medial_a_20260510_195038_001.png"
+    },
+    {
+        "category":  "medial",
+        "jamo":  "ㅏ",
+        "path":  "medial/ㅏ/medial_a_20260510_195038_002.png"
+    },
+    {
+        "category":  "medial",
+        "jamo":  "ㅏ",
+        "path":  "medial/ㅏ/medial_a_20260510_195038_003.png"
+    },
+    {
+        "category":  "medial",
+        "jamo":  "ㅑ",
+        "path":  "medial/ㅑ/medial_ya_20260510_195046_002.png"
+    },
+    {
+        "category":  "medial",
+        "jamo":  "ㅑ",
+        "path":  "medial/ㅑ/medial_ya_20260510_195046_003.png"
+    },
+    {
+        "category":  "medial",
+        "jamo":  "ㅑ",
+        "path":  "medial/ㅑ/medial_ya_20260510_195046_004.png"
+    },
+    {
+        "category":  "medial",
+        "jamo":  "ㅓ",
+        "path":  "medial/ㅓ/medial_eo_20260510_195111_001.png"
+    },
+    {
+        "category":  "medial",
+        "jamo":  "ㅓ",
+        "path":  "medial/ㅓ/medial_eo_20260510_195111_002.png"
+    },
+    {
+        "category":  "medial",
+        "jamo":  "ㅓ",
+        "path":  "medial/ㅓ/medial_eo_20260510_195111_003.png"
+    },
+    {
+        "category":  "medial",
+        "jamo":  "ㅕ",
+        "path":  "medial/ㅕ/medial_yeo_20260510_200056_001.png"
+    },
+    {
+        "category":  "medial",
+        "jamo":  "ㅕ",
+        "path":  "medial/ㅕ/medial_yeo_20260510_200056_002.png"
+    },
+    {
+        "category":  "medial",
+        "jamo":  "ㅗ",
+        "path":  "medial/ㅗ/medial_o_20260510_195128_001.png"
+    },
+    {
+        "category":  "medial",
+        "jamo":  "ㅗ",
+        "path":  "medial/ㅗ/medial_o_20260510_195128_002.png"
+    },
+    {
+        "category":  "medial",
+        "jamo":  "ㅗ",
+        "path":  "medial/ㅗ/medial_o_20260510_195128_003.png"
+    },
+    {
+        "category":  "medial",
+        "jamo":  "ㅛ",
+        "path":  "medial/ㅛ/medial_yo_20260510_195139_001.png"
+    },
+    {
+        "category":  "medial",
+        "jamo":  "ㅛ",
+        "path":  "medial/ㅛ/medial_yo_20260510_195139_002.png"
+    },
+    {
+        "category":  "medial",
+        "jamo":  "ㅛ",
+        "path":  "medial/ㅛ/medial_yo_20260510_195139_003.png"
+    },
+    {
+        "category":  "medial",
+        "jamo":  "ㅜ",
+        "path":  "medial/ㅜ/medial_u_20260510_195147_001.png"
+    },
+    {
+        "category":  "medial",
+        "jamo":  "ㅜ",
+        "path":  "medial/ㅜ/medial_u_20260510_195147_002.png"
+    },
+    {
+        "category":  "medial",
+        "jamo":  "ㅜ",
+        "path":  "medial/ㅜ/medial_u_20260510_195147_003.png"
+    },
+    {
+        "category":  "medial",
+        "jamo":  "ㅠ",
+        "path":  "medial/ㅠ/medial_yu_20260510_195154_001.png"
+    },
+    {
+        "category":  "medial",
+        "jamo":  "ㅠ",
+        "path":  "medial/ㅠ/medial_yu_20260510_195154_002.png"
+    },
+    {
+        "category":  "medial",
+        "jamo":  "ㅠ",
+        "path":  "medial/ㅠ/medial_yu_20260510_195154_003.png"
+    },
+    {
+        "category":  "medial",
+        "jamo":  "ㅠ",
+        "path":  "medial/ㅠ/medial_yu_20260510_195154_004.png"
+    },
+    {
+        "category":  "medial",
+        "jamo":  "ㅠ",
+        "path":  "medial/ㅠ/medial_yu_20260510_195154_005.png"
+    },
+    {
+        "category":  "medial",
+        "jamo":  "ㅡ",
+        "path":  "medial/ㅡ/medial_eu_20260510_195227_001.png"
+    },
+    {
+        "category":  "medial",
+        "jamo":  "ㅡ",
+        "path":  "medial/ㅡ/medial_eu_20260510_195227_002.png"
+    },
+    {
+        "category":  "medial",
+        "jamo":  "ㅡ",
+        "path":  "medial/ㅡ/medial_eu_20260510_195227_003.png"
+    },
+    {
+        "category":  "medial",
+        "jamo":  "ㅣ",
+        "path":  "medial/ㅣ/medial_i_20260510_195251_001.png"
+    },
+    {
+        "category":  "medial",
+        "jamo":  "ㅣ",
+        "path":  "medial/ㅣ/medial_i_20260510_195251_002.png"
+    },
+    {
+        "category":  "medial",
+        "jamo":  "ㅣ",
+        "path":  "medial/ㅣ/medial_i_20260510_195251_003.png"
+    }
+]

@@ -1,0 +1,28 @@
+{
+  "name": "faxsender",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "admin:build": "npm.cmd --prefix ../frontend/admin run build",
+    "predev": "npm.cmd run admin:build",
+    "dev": "vite --host 127.0.0.1 --port 5791",
+    "build": "tsc -b && vite build",
+    "build:pages": "tsc -b && vite build --mode pages",
+    "preview": "vite preview --host 127.0.0.1 --port 4891"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "^5.0.0",
+    "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^4.10.38",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tesseract.js": "^7.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.11"
+  }
+}
