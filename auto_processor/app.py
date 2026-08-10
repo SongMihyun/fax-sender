@@ -31,13 +31,13 @@ from auto_processor.folder_processor import DEFAULT_TEMPLATE_ID, FolderMonitor, 
 APP_DATA_DIR = Path(os.environ.get("APPDATA", Path.home())) / "FaxSenderAutoProcessor"
 SETTINGS_PATH = APP_DATA_DIR / "settings.json"
 
-BG = "#070b12"
-PANEL = "#0d141f"
-CARD = "#111b28"
-BORDER = "#263346"
-TEXT = "#edf4ff"
-MUTED = "#93a4b8"
-ACCENT = "#b780ff"
+BG = "#080b11"
+PANEL = "#0d141d"
+CARD = "#121b27"
+BORDER = "#28374a"
+TEXT = "#f1f5fb"
+MUTED = "#98a8bb"
+ACCENT = "#a86eff"
 GREEN = "#36d399"
 WARNING = "#f6b44c"
 RED = "#ff6b7a"
@@ -62,15 +62,22 @@ def save_settings(base_directory: Path) -> None:
 class FaxSenderAutoProcessorApp:
     def __init__(self, root: tk.Tk, initial_base: Path) -> None:
         self.root = root
-        self.root.title("FaxSender 자동처리")
-        self.root.geometry("920x650")
-        self.root.minsize(780, 560)
+        self.root.overrideredirect(True)
+        self.root.geometry("920x610")
+        self.root.minsize(760, 540)
         self.root.configure(bg=BG)
+        # Tk can make the whole native window translucent. Child widgets are
+        # intentionally dark/opaque so text remains readable over a desktop.
+        try:
+            self.root.attributes("-alpha", 0.96)
+        except tk.TclError:
+            pass
         self.events: queue.Queue[ProcessingResult] = queue.Queue()
         self.monitor: FolderMonitor | None = None
         self.base_directory = tk.StringVar(value=str(initial_base))
         self.status = tk.StringVar(value="대기 중")
         self.status_detail = tk.StringVar(value="감시를 시작하면 새 PDF를 자동으로 처리합니다.")
+        self._drag_offset = (0, 0)
         self._build()
         self.root.after(400, self._drain_events)
         self.root.protocol("WM_DELETE_WINDOW", self._close)
@@ -78,69 +85,94 @@ class FaxSenderAutoProcessorApp:
     @staticmethod
     def _button(parent: tk.Misc, text: str, command, background: str, foreground: str = TEXT, **kwargs) -> tk.Button:
         return tk.Button(
-            parent,
-            text=text,
-            command=command,
-            bg=background,
-            fg=foreground,
+            parent, text=text, command=command, bg=background, fg=foreground,
             activebackground="#8757d4" if background == "#6d3cbb" else "#2b4058",
-            activeforeground=TEXT,
-            relief="flat",
-            bd=0,
-            cursor="hand2",
-            font=("Malgun Gothic", 10, "bold"),
-            **kwargs,
+            activeforeground=TEXT, relief="flat", bd=0, cursor="hand2",
+            font=("Malgun Gothic", 10, "bold"), **kwargs,
         )
 
+    def _draw_fax_icon(self, parent: tk.Misc) -> tk.Canvas:
+        canvas = tk.Canvas(parent, width=42, height=42, bg="#151b2b", highlightthickness=0)
+        # Paper + fax machine + outgoing arrow: a compact custom app icon.
+        canvas.create_rectangle(13, 7, 29, 20, outline="#edf4ff", width=2)
+        canvas.create_line(17, 12, 26, 12, fill="#9fb3cb", width=1)
+        canvas.create_rectangle(8, 18, 34, 33, outline="#edf4ff", width=2)
+        canvas.create_line(12, 24, 30, 24, fill="#9fb3cb", width=2)
+        canvas.create_line(13, 33, 13, 36, fill="#edf4ff", width=2)
+        canvas.create_line(29, 33, 29, 36, fill="#edf4ff", width=2)
+        canvas.create_line(30, 11, 39, 11, fill=ACCENT, width=2)
+        canvas.create_line(36, 7, 40, 11, fill=ACCENT, width=2)
+        canvas.create_line(36, 15, 40, 11, fill=ACCENT, width=2)
+        return canvas
+
     def _build(self) -> None:
-        outer = tk.Frame(self.root, bg=BG, padx=32, pady=26)
+        titlebar = tk.Frame(self.root, bg="#0a0e15", height=36)
+        titlebar.pack(fill="x")
+        titlebar.pack_propagate(False)
+        titlebar.bind("<ButtonPress-1>", self._start_move)
+        titlebar.bind("<B1-Motion>", self._move_window)
+        tk.Label(titlebar, text="FaxSender 자동처리", fg="#cdd8e7", bg="#0a0e15", font=("Malgun Gothic", 9)).pack(side="left", padx=14)
+        self._button(titlebar, "—", self._minimize, "#0a0e15", foreground="#b7c4d4", padx=13, pady=3).pack(side="right")
+        self._button(titlebar, "×", self._close, "#0a0e15", foreground="#ff8995", padx=13, pady=3).pack(side="right")
+
+        outer = tk.Frame(self.root, bg=BG, padx=24, pady=16)
         outer.pack(fill="both", expand=True)
 
         header = tk.Frame(outer, bg=BG)
-        header.pack(fill="x", pady=(0, 22))
-        tk.Label(header, text="◉", fg=ACCENT, bg="#10182a", font=("Segoe UI", 25, "bold"), width=3, pady=7).pack(side="left")
-        title_box = tk.Frame(header, bg=BG)
-        title_box.pack(side="left", padx=14)
-        tk.Label(title_box, text="FaxSender", fg=TEXT, bg=BG, font=("Malgun Gothic", 20, "bold")).pack(anchor="w")
-        tk.Label(title_box, text="안전한 동의서 자동 처리", fg=MUTED, bg=BG, font=("Malgun Gothic", 10)).pack(anchor="w", pady=(1, 0))
-        tk.Label(header, text="  자동처리 준비됨  ", fg="#bcefdc", bg="#123a32", font=("Malgun Gothic", 10, "bold"), pady=7).pack(side="right", pady=6)
+        header.pack(fill="x", pady=(0, 14))
+        self._draw_fax_icon(header).pack(side="left")
+        words = tk.Frame(header, bg=BG)
+        words.pack(side="left", padx=12)
+        tk.Label(words, text="FaxSender", fg=TEXT, bg=BG, font=("Malgun Gothic", 18, "bold")).pack(anchor="w")
+        tk.Label(words, text="동의서 자동 합성 · 폴더 감시", fg=MUTED, bg=BG, font=("Malgun Gothic", 9)).pack(anchor="w")
+        tk.Label(header, text="●  준비됨", fg="#c9f6df", bg="#133d33", font=("Malgun Gothic", 9, "bold"), padx=12, pady=6).pack(side="right", pady=5)
 
-        workspace = tk.Frame(outer, bg=PANEL, highlightbackground=BORDER, highlightthickness=1, padx=26, pady=24)
-        workspace.pack(fill="both", expand=True)
-        tk.Label(workspace, text="자동 처리 설정", fg=TEXT, bg=PANEL, font=("Malgun Gothic", 17, "bold")).pack(anchor="w")
-        tk.Label(workspace, text="PDF를 지정 폴더에 넣으면 동의서 합성부터 정리까지 자동으로 진행합니다.", fg=MUTED, bg=PANEL, font=("Malgun Gothic", 10)).pack(anchor="w", pady=(4, 15))
-        tk.Frame(workspace, bg=ACCENT, height=2).pack(fill="x", pady=(0, 22))
+        content = tk.Frame(outer, bg=PANEL, highlightbackground=BORDER, highlightthickness=1, padx=20, pady=18)
+        content.pack(fill="both", expand=True)
+        tk.Label(content, text="자동 처리 설정", fg=TEXT, bg=PANEL, font=("Malgun Gothic", 15, "bold")).pack(anchor="w")
+        tk.Label(content, text="PDF를 지정 폴더에 넣으면 체크·이름·서명을 자동으로 합성합니다.", fg=MUTED, bg=PANEL, font=("Malgun Gothic", 9)).pack(anchor="w", pady=(2, 10))
+        tk.Frame(content, bg=ACCENT, height=2).pack(fill="x", pady=(0, 14))
 
-        directory_card = tk.Frame(workspace, bg=CARD, highlightbackground=BORDER, highlightthickness=1, padx=18, pady=16)
-        directory_card.pack(fill="x")
-        tk.Label(directory_card, text="감시할 폴더", fg=TEXT, bg=CARD, font=("Malgun Gothic", 12, "bold")).pack(anchor="w")
-        tk.Label(directory_card, text="선택 위치에 faxsender / 사용완료 / 오류 폴더가 자동으로 만들어집니다.", fg=MUTED, bg=CARD, font=("Malgun Gothic", 9)).pack(anchor="w", pady=(2, 10))
-        directory_row = tk.Frame(directory_card, bg=CARD)
-        directory_row.pack(fill="x")
-        tk.Entry(directory_row, textvariable=self.base_directory, bg="#09111b", fg=TEXT, insertbackground=TEXT, relief="flat", font=("Consolas", 10), highlightthickness=1, highlightbackground="#344257", highlightcolor=ACCENT).pack(side="left", fill="x", expand=True, ipady=9)
-        self._button(directory_row, "폴더 선택", self._choose_directory, "#1c2b3d", padx=18, pady=9).pack(side="left", padx=(10, 0))
+        folder_card = tk.Frame(content, bg=CARD, highlightbackground=BORDER, highlightthickness=1, padx=15, pady=12)
+        folder_card.pack(fill="x")
+        tk.Label(folder_card, text="감시할 폴더", fg=TEXT, bg=CARD, font=("Malgun Gothic", 11, "bold")).pack(anchor="w")
+        tk.Label(folder_card, text="faxsender / 사용완료 / 오류 폴더가 자동으로 만들어집니다.", fg=MUTED, bg=CARD, font=("Malgun Gothic", 8)).pack(anchor="w", pady=(1, 8))
+        folder_row = tk.Frame(folder_card, bg=CARD)
+        folder_row.pack(fill="x")
+        tk.Entry(folder_row, textvariable=self.base_directory, bg="#09111a", fg=TEXT, insertbackground=TEXT, relief="flat", font=("Consolas", 9), highlightthickness=1, highlightbackground="#344257", highlightcolor=ACCENT).pack(side="left", fill="x", expand=True, ipady=7)
+        self._button(folder_row, "폴더 선택", self._choose_directory, "#23344a", padx=15, pady=7).pack(side="left", padx=(8, 0))
 
-        controls = tk.Frame(workspace, bg=PANEL)
-        controls.pack(fill="x", pady=18)
-        self._button(controls, "▶  감시 시작", self.start, "#6d3cbb", padx=22, pady=11).pack(side="left")
-        self._button(controls, "■  감시 중지", self.stop, "#263447", padx=18, pady=11).pack(side="left", padx=8)
-        self._button(controls, "▣  faxsender 폴더 열기", self.open_watch_folder, PANEL, foreground="#b9c9dd", padx=14, pady=11).pack(side="left")
+        controls = tk.Frame(content, bg=PANEL)
+        controls.pack(fill="x", pady=14)
+        self._button(controls, "▶  감시 시작", self.start, "#6d3cbb", padx=18, pady=9).pack(side="left")
+        self._button(controls, "■  감시 중지", self.stop, "#263447", padx=15, pady=9).pack(side="left", padx=7)
+        self._button(controls, "▣  폴더 열기", self.open_watch_folder, PANEL, foreground="#b9c9dd", padx=13, pady=9).pack(side="left")
 
-        status_card = tk.Frame(workspace, bg="#0b1d25", highlightbackground="#1c4b58", highlightthickness=1, padx=18, pady=14)
+        status_card = tk.Frame(content, bg="#0b1e26", highlightbackground="#1b5363", highlightthickness=1, padx=14, pady=10)
         status_card.pack(fill="x")
-        status_row = tk.Frame(status_card, bg="#0b1d25")
+        status_row = tk.Frame(status_card, bg="#0b1e26")
         status_row.pack(fill="x")
-        self.status_dot = tk.Label(status_row, text="●", fg=WARNING, bg="#0b1d25", font=("Segoe UI", 13))
+        self.status_dot = tk.Label(status_row, text="●", fg=WARNING, bg="#0b1e26", font=("Segoe UI", 11))
         self.status_dot.pack(side="left")
-        tk.Label(status_row, textvariable=self.status, fg=TEXT, bg="#0b1d25", font=("Malgun Gothic", 11, "bold")).pack(side="left", padx=8)
-        tk.Label(status_card, textvariable=self.status_detail, fg=MUTED, bg="#0b1d25", font=("Malgun Gothic", 9), wraplength=760, justify="left").pack(anchor="w", padx=23, pady=(3, 0))
+        tk.Label(status_row, textvariable=self.status, fg=TEXT, bg="#0b1e26", font=("Malgun Gothic", 10, "bold")).pack(side="left", padx=7)
+        tk.Label(status_card, textvariable=self.status_detail, fg=MUTED, bg="#0b1e26", font=("Malgun Gothic", 8), wraplength=720, justify="left").pack(anchor="w", padx=19, pady=(2, 0))
 
-        log_card = tk.Frame(workspace, bg=CARD, highlightbackground=BORDER, highlightthickness=1, padx=18, pady=14)
-        log_card.pack(fill="both", expand=True, pady=(18, 0))
-        tk.Label(log_card, text="처리 기록", fg=TEXT, bg=CARD, font=("Malgun Gothic", 12, "bold")).pack(anchor="w")
-        tk.Label(log_card, text="최근 자동 처리 결과와 오류를 확인합니다.", fg=MUTED, bg=CARD, font=("Malgun Gothic", 9)).pack(anchor="w", pady=(2, 10))
-        self.log = tk.Text(log_card, height=8, state="disabled", wrap="word", bg="#09111b", fg="#c9d7e8", insertbackground=TEXT, relief="flat", padx=14, pady=12, font=("Malgun Gothic", 10), highlightthickness=1, highlightbackground=BORDER)
-        self.log.pack(fill="both", expand=True)
+        log_card = tk.Frame(content, bg=CARD, highlightbackground=BORDER, highlightthickness=1, padx=14, pady=10)
+        log_card.pack(fill="both", expand=True, pady=(14, 0))
+        tk.Label(log_card, text="처리 기록", fg=TEXT, bg=CARD, font=("Malgun Gothic", 10, "bold")).pack(anchor="w")
+        self.log = tk.Text(log_card, height=4, state="disabled", wrap="word", bg="#09111a", fg="#c9d7e8", insertbackground=TEXT, relief="flat", padx=12, pady=8, font=("Malgun Gothic", 9), highlightthickness=1, highlightbackground=BORDER)
+        self.log.pack(fill="both", expand=True, pady=(7, 0))
+
+    def _start_move(self, event: tk.Event) -> None:
+        self._drag_offset = (event.x_root - self.root.winfo_x(), event.y_root - self.root.winfo_y())
+
+    def _move_window(self, event: tk.Event) -> None:
+        self.root.geometry(f"+{event.x_root - self._drag_offset[0]}+{event.y_root - self._drag_offset[1]}")
+
+    def _minimize(self) -> None:
+        self.root.overrideredirect(False)
+        self.root.iconify()
+        self.root.bind("<Map>", lambda _event: self.root.overrideredirect(True), add="+")
 
     def _set_status(self, title: str, detail: str, color: str) -> None:
         self.status.set(title)
