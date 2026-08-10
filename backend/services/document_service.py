@@ -278,7 +278,19 @@ def _has_hieut_cap_stroke(char_crop: Image.Image) -> bool:
         return False
     arr = np.array(char_crop.convert("L"))
     _, thresh = cv2.threshold(arr, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
-    row_density = (thresh > 0).sum(axis=1) / max(1, thresh.shape[1])
+    ink = thresh > 0
+    row_density = ink.sum(axis=1) / max(1, ink.shape[1])
+
+    def longest_ink_run(row: np.ndarray) -> int:
+        longest = 0
+        current = 0
+        for pixel in row:
+            if pixel:
+                current += 1
+                longest = max(longest, current)
+            else:
+                current = 0
+        return longest
 
     top_row_count = max(1, int(len(row_density) * 0.4))
     top_rows = row_density[:top_row_count]
@@ -286,7 +298,18 @@ def _has_hieut_cap_stroke(char_crop: Image.Image) -> bool:
     peak = top_rows[peak_index]
     lead_in = min(top_rows[:peak_index]) if peak_index > 0 else 0.0
     trail_out = min(top_rows[peak_index + 1 :]) if peak_index + 1 < len(top_rows) else peak
-    return (peak - lead_in) > 0.45 and (peak - trail_out) > 0.3
+    cap_width = longest_ink_run(ink[peak_index]) / max(1, ink.shape[1])
+
+    # Printed ㅎ on these forms often has a cap only half as wide as its
+    # glyph box. The earlier density-only rule expected a much wider stroke,
+    # so ``혜`` could be read as ``예``. A long upper horizontal run followed
+    # by a clear gap is distinctive for ㅎ and is stable for any name position.
+    return (
+        cap_width >= 0.42
+        and peak >= 0.18
+        and (peak - lead_in) >= 0.18
+        and (peak - trail_out) >= 0.12
+    )
 
 
 def _correct_hieut_ieung_confusion(image: Image.Image, text: str, data: dict) -> str:
