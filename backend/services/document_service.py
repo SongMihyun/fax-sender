@@ -459,11 +459,19 @@ def _ocr_pdf_region(pdf_path: Path, field: ExtractFieldRequest, zoom: float = 6.
     if image is None:
         return "", None
     try:
+        # Most registered regions contain one line.  Some scans, however,
+        # shift a separator line into the crop; PSM 7 then reports no text at
+        # all despite the name being visible.  Retry only that empty case with
+        # the compact multi-line mode rather than dropping the field.
         text = pytesseract.image_to_string(image, lang="kor+eng", config="--psm 7")
         data = pytesseract.image_to_data(image, lang="kor+eng", config="--psm 7", output_type=pytesseract.Output.DICT)
+        text = re.sub(r"\s+", " ", text).strip()
+        if not text:
+            text = pytesseract.image_to_string(image, lang="kor+eng", config="--psm 6")
+            data = pytesseract.image_to_data(image, lang="kor+eng", config="--psm 6", output_type=pytesseract.Output.DICT)
+            text = re.sub(r"\s+", " ", text).strip()
     except pytesseract.TesseractNotFoundError:
         return "", None
-    text = re.sub(r"\s+", " ", text).strip()
     if not text:
         return "", None
     confidences = [float(conf) for word, conf in zip(data["text"], data["conf"]) if word.strip() and str(conf) not in ("-1", "")]
@@ -514,6 +522,11 @@ def sanitize_manager_code(text: str) -> str:
 
 
 def sanitize_person_name(text: str) -> str:
+    # A PSM-6 fallback can retain a small amount of table-line noise around a
+    # scanned name.  Prefer an actual Korean name token when one was found.
+    korean_names = re.findall(r"[가-힣]{2,5}", text)
+    if korean_names:
+        return korean_names[-1]
     return re.sub(r"\s+", " ", re.sub(r"[^가-힣a-zA-Z\s]", " ", text)).strip()
 
 
