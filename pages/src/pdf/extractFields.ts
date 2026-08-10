@@ -9,7 +9,6 @@ pdfjs.GlobalWorkerOptions.workerSrc = pdfWorker;
 // returns nothing for them. OCR only kicks in as a fallback for that case,
 // so normal digital PDFs keep using the fast, exact text-layer path.
 const OCR_RENDER_SCALE = 3;
-const OCR_LOW_CONFIDENCE_THRESHOLD = 60;
 const HIEUT_INDEX = 18; // ㅎ in the 19-way initial-consonant table
 const IEUNG_INDEX = 11; // ㅇ
 
@@ -100,7 +99,7 @@ function hasHieutCapStroke(cropCanvas: HTMLCanvasElement, bbox: Bbox): boolean {
   const peak = topRows[peakIndex];
   const leadIn = peakIndex > 0 ? Math.min(...topRows.slice(0, peakIndex)) : 0;
   const trailOut = peakIndex + 1 < topRows.length ? Math.min(...topRows.slice(peakIndex + 1)) : peak;
-  return peak - leadIn > 0.45 && peak - trailOut > 0.3;
+  return peak - leadIn >= 0.18 && peak - trailOut >= 0.12;
 }
 
 function flattenSymbols(page: TesseractPage): TesseractSymbol[] {
@@ -125,7 +124,6 @@ function correctHieutIeungConfusion(cropCanvas: HTMLCanvasElement, page: Tessera
 
   const correctedChars = symbols.map((symbol) => {
     const char = symbol.text;
-    if (symbol.confidence >= OCR_LOW_CONFIDENCE_THRESHOLD) return char;
     const swapped = swapHieutIeungInitial(char);
     if (!swapped) return char;
     const code = char.charCodeAt(0) - 0xac00;

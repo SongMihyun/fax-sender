@@ -59,6 +59,16 @@ const similarJamo: Record<string, string[]> = {
   "ㅠ": ["ㅜ"],
 };
 
+// Compound vowels must not fall back to a visually similar single vowel.
+// For example, ㅖ needs the ㅕ handwriting plus one fixed ㅣ on its right.
+const medialICompounds: Record<string, { base: string; side: "left" | "right" }> = {
+  "\u3150": { base: "\u314f", side: "left" },
+  "\u3152": { base: "\u3151", side: "left" },
+  "\u3154": { base: "\u3153", side: "left" },
+  "\u3156": { base: "\u3155", side: "right" },
+  "\u315a": { base: "\u3161", side: "right" },
+};
+
 let jamoManifestPromise: Promise<JamoAsset[]> | null = null;
 const imageCache = new Map<string, Promise<HTMLImageElement>>();
 
@@ -116,7 +126,32 @@ async function loadImage(path: string): Promise<HTMLImageElement> {
   return imageCache.get(path)!;
 }
 
-async function pickJamoImage(category: JamoAsset["category"], jamo: string, seen = new Set<string>()): Promise<HTMLImageElement | null> {
+function composeMedialICompound(base: HTMLImageElement, stroke: HTMLImageElement, side: "left" | "right"): HTMLCanvasElement {
+  const scale = Math.min(72 / Math.max(1, base.naturalHeight), 48 / Math.max(1, base.naturalWidth));
+  const baseWidth = Math.max(1, Math.round(base.naturalWidth * scale));
+  const baseHeight = Math.max(1, Math.round(base.naturalHeight * scale));
+  const strokeScale = Math.min(72 / Math.max(1, stroke.naturalHeight), 14 / Math.max(1, stroke.naturalWidth));
+  const strokeWidth = Math.max(1, Math.round(stroke.naturalWidth * strokeScale));
+  const strokeHeight = Math.max(1, Math.round(stroke.naturalHeight * strokeScale));
+  const gap = Math.max(1, Math.round(baseWidth / 12));
+  const canvas = document.createElement("canvas");
+  canvas.width = baseWidth + strokeWidth + gap;
+  canvas.height = Math.max(baseHeight, strokeHeight);
+  const context = canvas.getContext("2d");
+  if (!context) return canvas;
+  const baseY = Math.round((canvas.height - baseHeight) / 2);
+  const strokeY = Math.round((canvas.height - strokeHeight) / 2);
+  if (side === "left") {
+    context.drawImage(stroke, 0, strokeY, strokeWidth, strokeHeight);
+    context.drawImage(base, strokeWidth + gap, baseY, baseWidth, baseHeight);
+  } else {
+    context.drawImage(base, 0, baseY, baseWidth, baseHeight);
+    context.drawImage(stroke, baseWidth + gap, strokeY, strokeWidth, strokeHeight);
+  }
+  return canvas;
+}
+
+async function pickJamoImage(category: JamoAsset["category"], jamo: string, seen = new Set<string>()): Promise<CanvasImageSource | null> {
   const key = `${category}:${jamo}`;
   if (seen.has(key)) return null;
   seen.add(key);
@@ -124,6 +159,16 @@ async function pickJamoImage(category: JamoAsset["category"], jamo: string, seen
   const manifest = await loadJamoManifest();
   const direct = pick(manifest.filter((asset) => asset.category === category && asset.jamo === jamo));
   if (direct) return loadImage(direct.path);
+
+  const compound = category === "medial" ? medialICompounds[jamo] : undefined;
+  if (compound) {
+    const base = await pickJamoImage("medial", compound.base, new Set(seen));
+    const fixedStrokeAsset = manifest
+      .filter((asset) => asset.category === "medial" && asset.jamo === "\u3163")
+      .sort((left, right) => left.path.localeCompare(right.path))[0];
+    const stroke = fixedStrokeAsset ? await loadImage(fixedStrokeAsset.path) : null;
+    if (base instanceof HTMLImageElement && stroke) return composeMedialICompound(base, stroke, compound.side);
+  }
 
   const finalAsInitial = category === "final" && initials.includes(jamo) ? pick(manifest.filter((asset) => asset.category === "initial" && asset.jamo === jamo)) : null;
   if (finalAsInitial) return loadImage(finalAsInitial.path);
@@ -142,8 +187,8 @@ async function pickJamoImage(category: JamoAsset["category"], jamo: string, seen
 }
 
 function drawFittedImage(context: CanvasRenderingContext2D, image: CanvasImageSource, x: number, y: number, maxWidth: number, maxHeight: number) {
-  const sourceWidth = image instanceof HTMLImageElement ? image.naturalWidth : maxWidth;
-  const sourceHeight = image instanceof HTMLImageElement ? image.naturalHeight : maxHeight;
+  const sourceWidth = image instanceof HTMLImageElement ? image.naturalWidth : image instanceof HTMLCanvasElement ? image.width : maxWidth;
+  const sourceHeight = image instanceof HTMLImageElement ? image.naturalHeight : image instanceof HTMLCanvasElement ? image.height : maxHeight;
   const ratio = Math.min(maxWidth / Math.max(1, sourceWidth), maxHeight / Math.max(1, sourceHeight));
   const width = sourceWidth * ratio;
   const height = sourceHeight * ratio;
