@@ -55,6 +55,18 @@ COMPOSITE_JAMO: dict[str, list[str]] = {
     "ㅄ": ["ㅂ", "ㅅ"],
 }
 
+# Compound vertical vowels are not a horizontal sequence of two glyphs.  The
+# source handwriting set intentionally stores simple jamo, so construct these
+# by retaining the base vowel and adding the ㅣ stroke in its own narrow lane.
+# Unicode escapes keep this mapping independent of a source-file encoding.
+MEDIAL_I_COMPOUNDS: dict[str, tuple[str, str]] = {
+    "\u3150": ("\u314f", "left"),   # ㅐ = ㅏ + ㅣ
+    "\u3152": ("\u3151", "left"),   # ㅒ = ㅑ + ㅣ
+    "\u3154": ("\u3153", "left"),   # ㅔ = ㅓ + ㅣ
+    "\u3156": ("\u3155", "left"),   # ㅖ = ㅕ + ㅣ
+    "\u315a": ("\u3161", "right"),  # ㅢ = ㅡ + ㅣ
+}
+
 JAMO_SLUGS = {
     "ㄱ": "giyeok",
     "ㄲ": "ssang_giyeok",
@@ -460,6 +472,25 @@ def _jamo_asset_score(path: Path, category: str) -> float:
         return 0
 
 
+def _compose_medial_i_compound(base: Image.Image, i_stroke: Image.Image, side: str) -> Image.Image:
+    """Combine a base vowel with ㅣ without turning it into a second syllable."""
+    base = _fit_image(base.copy(), 48, 74)
+    i_stroke = _fit_image(i_stroke.copy(), 14, 74)
+    gap = max(1, base.width // 12)
+    width = base.width + i_stroke.width + gap
+    height = max(base.height, i_stroke.height)
+    canvas = Image.new("RGBA", (width, height), (255, 255, 255, 0))
+    base_y = max(0, (height - base.height) // 2)
+    i_y = max(0, (height - i_stroke.height) // 2)
+    if side == "left":
+        canvas.alpha_composite(i_stroke, (0, i_y))
+        canvas.alpha_composite(base, (i_stroke.width + gap, base_y))
+    else:
+        canvas.alpha_composite(base, (0, base_y))
+        canvas.alpha_composite(i_stroke, (base.width + gap, i_y))
+    return canvas.crop(canvas.getbbox() or (0, 0, canvas.width, canvas.height))
+
+
 def _load_jamo_image(category: str, jamo: str, rng: random.Random, seen: set[tuple[str, str]] | None = None) -> tuple[Image.Image | None, list[str], list[str]]:
     seen = seen or set()
     key = (category, jamo)
@@ -470,6 +501,14 @@ def _load_jamo_image(category: str, jamo: str, rng: random.Random, seen: set[tup
     path = _pick_asset(category, jamo, rng)
     if path is not None:
         return Image.open(path).convert("RGBA"), [f"{category}:{jamo}"], []
+
+    compound = MEDIAL_I_COMPOUNDS.get(jamo) if category == "medial" else None
+    if compound:
+        base_jamo, side = compound
+        base, base_used, base_missing = _load_jamo_image("medial", base_jamo, rng, seen.copy())
+        i_stroke, i_used, i_missing = _load_jamo_image("medial", "\u3163", rng, seen.copy())
+        if base is not None and i_stroke is not None and not base_missing and not i_missing:
+            return _compose_medial_i_compound(base, i_stroke, side), base_used + i_used + [f"auto:medial:{jamo}"], []
 
     component_jamos = COMPOSITE_JAMO.get(jamo)
     if not component_jamos:
