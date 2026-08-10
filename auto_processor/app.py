@@ -160,7 +160,7 @@ class FaxSenderAutoProcessorApp:
         controls.pack(fill="x", pady=14)
         self._button(controls, "▶  감시 시작", self.start, "#6d3cbb", padx=18, pady=9).pack(side="left")
         self._button(controls, "■  감시 중지", self.stop, "#263447", padx=15, pady=9).pack(side="left", padx=7)
-        self._button(controls, "▣  폴더 열기", self.open_watch_folder, PANEL, foreground="#b9c9dd", padx=13, pady=9).pack(side="left")
+        self._button(controls, "▣  완성본 폴더 열기", self.open_output_folder, PANEL, foreground="#b9c9dd", padx=13, pady=9).pack(side="left")
 
         status_card = tk.Frame(content, bg="#0b1e26", highlightbackground="#1b5363", highlightthickness=1, padx=14, pady=10)
         status_card.pack(fill="x")
@@ -245,8 +245,10 @@ class FaxSenderAutoProcessorApp:
         self._set_status("감시 중지", "자동 처리가 멈췄습니다. 필요할 때 다시 시작할 수 있습니다.", MUTED)
         self._write_log("폴더 감시를 중지했습니다.")
 
-    def open_watch_folder(self) -> None:
-        directory = self._watch_directory()
+    def open_output_folder(self) -> None:
+        directory = Path(self.output_directory.get()).expanduser()
+        if not str(self.output_directory.get()).strip():
+            directory = self._watch_directory()
         directory.mkdir(parents=True, exist_ok=True)
         os.startfile(directory)  # type: ignore[attr-defined]
 
