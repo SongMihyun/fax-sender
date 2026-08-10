@@ -42,6 +42,53 @@ ACCENT = "#a86eff"
 GREEN = "#36d399"
 WARNING = "#f6b44c"
 RED = "#ff6b7a"
+APP_WINDOW_TITLE = "FaxSender 자동처리"
+_INSTANCE_MUTEX: int | None = None
+
+
+def _activate_existing_window() -> None:
+    """Restore the existing borderless window when a second launch occurs."""
+    if os.name != "nt":
+        return
+    try:
+        import ctypes
+
+        user32 = ctypes.windll.user32
+        window = user32.FindWindowW(None, APP_WINDOW_TITLE)
+        if window:
+            user32.ShowWindow(window, 9)  # SW_RESTORE
+            user32.SetForegroundWindow(window)
+    except (AttributeError, OSError):
+        pass
+
+
+def _acquire_single_instance() -> bool:
+    """Keep one watcher process alive even when its shortcut is clicked again."""
+    global _INSTANCE_MUTEX
+    if os.name != "nt":
+        return True
+    try:
+        import ctypes
+        from ctypes import wintypes
+
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel32.CreateMutexW.argtypes = (ctypes.c_void_p, wintypes.BOOL, wintypes.LPCWSTR)
+        kernel32.CreateMutexW.restype = wintypes.HANDLE
+        kernel32.CloseHandle.argtypes = (wintypes.HANDLE,)
+        kernel32.CloseHandle.restype = wintypes.BOOL
+        ctypes.set_last_error(0)
+        handle = kernel32.CreateMutexW(None, False, "Local\\FaxSenderAutoProcessor.SingleInstance")
+        if not handle:
+            # Do not prevent startup if the Windows API itself is unavailable.
+            return True
+        if ctypes.get_last_error() == 183:  # ERROR_ALREADY_EXISTS
+            kernel32.CloseHandle(handle)
+            _activate_existing_window()
+            return False
+        _INSTANCE_MUTEX = handle
+        return True
+    except (AttributeError, OSError):
+        return True
 
 
 def default_base_directory() -> Path:
@@ -359,6 +406,8 @@ class FaxSenderAutoProcessorApp:
 
 
 def main() -> None:
+    if not _acquire_single_instance():
+        return
     parser = ArgumentParser(add_help=False)
     parser.add_argument("--watch-root")
     arguments, _ = parser.parse_known_args()
@@ -367,6 +416,7 @@ def main() -> None:
     saved_output = settings.get("output_directory")
     initial_output = Path(str(saved_output)) if saved_output else None
     root = tk.Tk()
+    root.title(APP_WINDOW_TITLE)
     app = FaxSenderAutoProcessorApp(root, initial, initial_output)
     app.start()
     root.mainloop()
