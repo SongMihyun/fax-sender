@@ -182,15 +182,18 @@ def _apply_check_stroke_profile(image: Image.Image, profile: str) -> Image.Image
     elif profile == "ultra_dark":
         # Preserve the user's sampled check shape. Only its existing ink is
         # darkened and slightly reinforced for legibility after fax rendering.
-        alpha = alpha.filter(ImageFilter.MaxFilter(5))
-        alpha = ImageEnhance.Brightness(alpha).enhance(1.8)
+        # Scanned consent forms and fax compression wash out thin pencil-like
+        # assets. Expand the *original* handwritten pixels one extra step and
+        # pull their RGB ink close to black; do not draw a replacement V.
+        alpha = alpha.filter(ImageFilter.MaxFilter(7))
+        alpha = ImageEnhance.Brightness(alpha).enhance(2.35)
         red, green, blue, _ = image.split()
         image = Image.merge(
             "RGBA",
             (
-                ImageEnhance.Brightness(red).enhance(0.42),
-                ImageEnhance.Brightness(green).enhance(0.42),
-                ImageEnhance.Brightness(blue).enhance(0.42),
+                ImageEnhance.Brightness(red).enhance(0.18),
+                ImageEnhance.Brightness(green).enhance(0.18),
+                ImageEnhance.Brightness(blue).enhance(0.18),
                 alpha,
             ),
         )
