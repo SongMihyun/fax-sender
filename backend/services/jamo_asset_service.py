@@ -63,7 +63,7 @@ MEDIAL_I_COMPOUNDS: dict[str, tuple[str, str]] = {
     "\u3150": ("\u314f", "left"),   # ㅐ = ㅏ + ㅣ
     "\u3152": ("\u3151", "left"),   # ㅒ = ㅑ + ㅣ
     "\u3154": ("\u3153", "left"),   # ㅔ = ㅓ + ㅣ
-    "\u3156": ("\u3155", "left"),   # ㅖ = ㅕ + ㅣ
+    "\u3156": ("\u3155", "right"),  # ㅖ = ㅕ followed by one fixed ㅣ
     "\u315a": ("\u3161", "right"),  # ㅢ = ㅡ + ㅣ
 }
 
@@ -439,6 +439,17 @@ def _pick_asset(category: str, jamo: str, rng: random.Random) -> Path | None:
     return None
 
 
+def _pick_fixed_asset(category: str, jamo: str) -> Path | None:
+    """Use a stable exemplar where an added stroke must not vary per render."""
+    assets = list_jamo_assets(category, jamo, include_inactive=False)
+    scored = [(_jamo_asset_score(resolve_jamo_asset(asset.id), category), resolve_jamo_asset(asset.id)) for asset in assets]
+    usable = [(score, path) for score, path in scored if score > 0]
+    if not usable:
+        return None
+    usable.sort(key=lambda item: (-item[0], item[1].name))
+    return usable[0][1]
+
+
 def _image_has_visible_pixels(path: Path) -> bool:
     try:
         image = Image.open(path).convert("RGBA")
@@ -506,7 +517,12 @@ def _load_jamo_image(category: str, jamo: str, rng: random.Random, seen: set[tup
     if compound:
         base_jamo, side = compound
         base, base_used, base_missing = _load_jamo_image("medial", base_jamo, rng, seen.copy())
-        i_stroke, i_used, i_missing = _load_jamo_image("medial", "\u3163", rng, seen.copy())
+        # ㅖ must have one consistent ㅣ placed after ㅕ. Randomly swapping
+        # this thin stroke makes the completed syllable look like another one.
+        fixed_i = _pick_fixed_asset("medial", "\u3163")
+        i_stroke = Image.open(fixed_i).convert("RGBA") if fixed_i is not None else None
+        i_used = ["medial:\u3163:fixed"] if i_stroke is not None else []
+        i_missing = [] if i_stroke is not None else ["medial:\u3163"]
         if base is not None and i_stroke is not None and not base_missing and not i_missing:
             return _compose_medial_i_compound(base, i_stroke, side), base_used + i_used + [f"auto:medial:{jamo}"], []
 
