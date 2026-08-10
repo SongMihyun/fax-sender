@@ -328,7 +328,7 @@ def _has_hieut_cap_stroke(char_crop: Image.Image) -> bool:
     )
 
 
-def _has_ye_second_vertical_stem(char_crop: Image.Image) -> bool:
+def _has_ye_right_facing_bars(char_crop: Image.Image) -> bool:
     """Detect ㅖ's extra right-hand vertical stem, distinguishing it from ㅕ.
 
     This check is only used after a glyph is already identified as ㅎ. It keeps
@@ -341,29 +341,48 @@ def _has_ye_second_vertical_stem(char_crop: Image.Image) -> bool:
     _, threshold = cv2.threshold(arr, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
     ink = threshold > 0
     height, width = ink.shape
-    start = int(width * 0.52)
 
-    stem_columns: list[int] = []
-    for x in range(start, width):
-        column = ink[:, x]
-        longest = 0
-        current = 0
-        for pixel in column:
+    def longest_run(row: np.ndarray) -> int:
+        longest = current = 0
+        for pixel in row:
             if pixel:
                 current += 1
                 longest = max(longest, current)
             else:
                 current = 0
-        if longest >= height * 0.38:
-            stem_columns.append(x)
+        return longest
+
+    # ㅖ is distinguished from ㅕ by two short horizontal bars extending to
+    # the right of the vowel spine.  The former vertical-stem rule could not
+    # recognise ordinary handwriting, so `혜` stayed incorrectly as `혀`.
+    start_y, end_y = int(height * 0.20), int(height * 0.85)
+    min_bar_width = max(3, int(width * 0.14))
+    right_bar_rows: list[int] = []
+    for y in range(start_y, max(start_y + 1, end_y)):
+        right_run = longest_run(ink[y, int(width * 0.50) :])
+        left_run = longest_run(ink[y, : int(width * 0.50)])
+        if min_bar_width <= right_run <= int(width * 0.45) and right_run > left_run + 1:
+            right_bar_rows.append(y)
 
     groups = 0
-    previous = -2
-    for column in stem_columns:
-        if column > previous + 1:
+    previous = -3
+    for row in right_bar_rows:
+        if row > previous + 2:  # allow a 1px anti-aliasing gap
             groups += 1
-        previous = column
-    return groups >= 2
+        previous = row
+    if groups >= 2:
+        return True
+
+    # A low-resolution scan can merge the two short ㅖ bars into nearly
+    # vertical blobs. Keep a strict fallback for that resampling artifact.
+    stem_groups = 0
+    previous = -2
+    for x in range(int(width * 0.52), width):
+        if longest_run(ink[:, x]) >= height * 0.38:
+            if x > previous + 1:
+                stem_groups += 1
+            previous = x
+    return stem_groups >= 2
 
 
 def _correct_hieut_ieung_confusion(image: Image.Image, text: str, data: dict) -> str:
@@ -405,7 +424,7 @@ def _correct_hieut_ieung_confusion(image: Image.Image, text: str, data: dict) ->
         should_be_hieut = _has_hieut_cap_stroke(char_crop)
         is_hieut = (ord(char) - 0xAC00) // 588 == HIEUT_INDEX
         candidate = swapped if should_be_hieut != is_hieut else char
-        if should_be_hieut and _medial_index(candidate) == YEO_MEDIAL_INDEX and _has_ye_second_vertical_stem(char_crop):
+        if should_be_hieut and _medial_index(candidate) == YEO_MEDIAL_INDEX and _has_ye_right_facing_bars(char_crop):
             candidate = _replace_medial(candidate, YE_MEDIAL_INDEX)
         if candidate != char:
             corrected[index] = candidate
