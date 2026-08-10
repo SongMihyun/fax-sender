@@ -133,11 +133,16 @@ class FolderProcessor:
 
     def pending_files(self) -> list[Path]:
         self.ensure_directories()
-        candidates = [
-            path
-            for path in self.root.glob("*.pdf")
-            if path.is_file() and not path.name.startswith("~") and self._is_stable(path)
-        ]
+        candidates: list[Path] = []
+        for path in self.root.glob("*.pdf"):
+            if not path.is_file() or path.name.startswith("~") or not self._is_stable(path):
+                continue
+            # Completed PDFs are written to the same directory as inputs. Do
+            # not merely reject them during processing; keep them out of the
+            # watch queue completely so they can never start a second run.
+            if self._hash(path) in self._processed:
+                continue
+            candidates.append(path)
         return sorted(candidates, key=lambda path: path.stat().st_mtime)
 
     def process(self, source: Path) -> ProcessingResult:

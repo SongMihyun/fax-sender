@@ -92,7 +92,10 @@ class FaxSenderAutoProcessorApp:
 
     def _watch_directory(self) -> Path:
         base = Path(self.base_directory.get()).expanduser()
-        return base / "faxsender"
+        # The installer asks for a parent folder, but accepting an already
+        # existing faxsender folder prevents an accidental faxsender/faxsender
+        # nesting when the user selects it directly.
+        return base if base.name.casefold() == "faxsender" else base / "faxsender"
 
     def _write_log(self, text: str) -> None:
         self.log.configure(state="normal")
