@@ -126,6 +126,8 @@ class FaxSenderAutoProcessorApp:
         self.events: queue.Queue[ProcessingResult] = queue.Queue()
         self.monitor: FolderMonitor | None = None
         self._taskbar_minimizing = False
+        self._configuration_after_id: str | None = None
+        self._configuration_trace_suspended = False
         self.base_directory = tk.StringVar(value=str(initial_base))
         self.watch_directory = tk.StringVar(value=str(self._watch_directory()))
         self.output_directory = tk.StringVar(value=str(initial_output or self._watch_directory()))
@@ -133,6 +135,8 @@ class FaxSenderAutoProcessorApp:
         self.status_detail = tk.StringVar(value="감시를 시작하면 새 PDF를 자동으로 처리합니다.")
         self._drag_offset = (0, 0)
         self.root.bind("<Map>", self._restore_from_taskbar, add="+")
+        self.base_directory.trace_add("write", self._schedule_configuration_apply)
+        self.output_directory.trace_add("write", self._schedule_configuration_apply)
         self._build()
         self.root.after(400, self._drain_events)
         self.root.protocol("WM_DELETE_WINDOW", self._close)
@@ -256,6 +260,51 @@ class FaxSenderAutoProcessorApp:
         self.status_detail.set(detail)
         self.status_dot.configure(fg=color)
 
+    def _schedule_configuration_apply(self, *_args: object) -> None:
+        """Apply a selected/typed folder after the user has paused typing."""
+        if self._configuration_trace_suspended:
+            return
+        self.watch_directory.set(str(self._watch_directory()))
+        if self._configuration_after_id:
+            self.root.after_cancel(self._configuration_after_id)
+        self._configuration_after_id = self.root.after(650, self._apply_changed_configuration)
+
+    def _configuration_paths(self) -> tuple[Path, Path, Path] | None:
+        base = Path(self.base_directory.get()).expanduser()
+        if not base.is_dir():
+            return None
+        watch_directory = self._watch_directory()
+        output_text = self.output_directory.get().strip()
+        output_directory = Path(output_text).expanduser() if output_text else watch_directory
+        return base, watch_directory, output_directory
+
+    def _apply_changed_configuration(self) -> None:
+        self._configuration_after_id = None
+        paths = self._configuration_paths()
+        if paths is None:
+            return
+        base, watch_directory, output_directory = paths
+        save_settings(base, output_directory)
+        if not (self.monitor and self.monitor.running):
+            return
+
+        current_processor = self.monitor.processor
+        if current_processor.root == watch_directory.resolve() and current_processor.output_dir == output_directory.resolve():
+            return
+
+        self.monitor.stop()
+        processor = FolderProcessor(watch_directory, template_id=DEFAULT_TEMPLATE_ID, output_dir=output_directory)
+        try:
+            processor.ensure_directories()
+        except OSError as exc:
+            self._set_status("경로 적용 실패", str(exc), RED)
+            self._write_log(f"폴더 변경 실패: {exc}")
+            return
+        self.monitor = FolderMonitor(processor, self.events.put)
+        self.monitor.start()
+        self._set_status("감시 경로 변경됨", f"입력: {processor.root} / 완성본: {processor.output_dir}", GREEN)
+        self._write_log("변경한 폴더 경로를 즉시 적용했습니다.")
+
     def _choose_directory(self) -> None:
         selected = filedialog.askdirectory(initialdir=self.base_directory.get() or str(default_base_directory()))
         if selected:
@@ -286,16 +335,17 @@ class FaxSenderAutoProcessorApp:
     def start(self) -> None:
         if self.monitor and self.monitor.running:
             return
-        base = Path(self.base_directory.get()).expanduser()
-        if not base.exists() or not base.is_dir():
+        paths = self._configuration_paths()
+        if paths is None:
             messagebox.showerror("폴더 오류", "유효한 상위 폴더를 선택해 주세요.")
             return
-        output_directory = Path(self.output_directory.get()).expanduser()
-        if not output_directory:
-            output_directory = self._watch_directory()
+        base, watch_directory, output_directory = paths
+        if not self.output_directory.get().strip():
+            self._configuration_trace_suspended = True
             self.output_directory.set(str(output_directory))
+            self._configuration_trace_suspended = False
         save_settings(base, output_directory)
-        processor = FolderProcessor(self._watch_directory(), template_id=DEFAULT_TEMPLATE_ID, output_dir=output_directory)
+        processor = FolderProcessor(watch_directory, template_id=DEFAULT_TEMPLATE_ID, output_dir=output_directory)
         processor.ensure_directories()
         self.monitor = FolderMonitor(processor, self.events.put)
         self.monitor.start()
