@@ -39,9 +39,10 @@ class FolderProcessor:
     fingerprint ledger prevents generated PDFs from being picked up again.
     """
 
-    def __init__(self, root: Path, template_id: int = DEFAULT_TEMPLATE_ID) -> None:
+    def __init__(self, root: Path, template_id: int = DEFAULT_TEMPLATE_ID, output_dir: Path | None = None) -> None:
         self.root = root.expanduser().resolve()
         self.template_id = template_id
+        self.output_dir = output_dir.expanduser().resolve() if output_dir else self.root
         self.completed_dir = self.root / "사용완료"
         self.failed_dir = self.root / "오류"
         self.state_path = self.root / ".faxsender-processed.json"
@@ -50,6 +51,7 @@ class FolderProcessor:
 
     def ensure_directories(self) -> None:
         self.root.mkdir(parents=True, exist_ok=True)
+        self.output_dir.mkdir(parents=True, exist_ok=True)
         self.completed_dir.mkdir(parents=True, exist_ok=True)
         self.failed_dir.mkdir(parents=True, exist_ok=True)
 
@@ -168,7 +170,7 @@ class FolderProcessor:
             if not result.success or not generated.exists():
                 raise RuntimeError("PDF 합성 결과 파일을 만들지 못했습니다.")
 
-            destination = self._unique_destination(self.root, result.output_filename)
+            destination = self._unique_destination(self.output_dir, result.output_filename)
             shutil.move(str(generated), str(destination))
             archived = self._unique_destination(self.completed_dir, source.name)
             shutil.move(str(source), str(archived))

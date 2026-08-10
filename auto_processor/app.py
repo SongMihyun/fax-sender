@@ -54,17 +54,20 @@ def load_settings() -> dict[str, object]:
         return {}
 
 
-def save_settings(base_directory: Path) -> None:
+def save_settings(base_directory: Path, output_directory: Path) -> None:
     APP_DATA_DIR.mkdir(parents=True, exist_ok=True)
-    SETTINGS_PATH.write_text(json.dumps({"base_directory": str(base_directory)}, ensure_ascii=False, indent=2), encoding="utf-8")
+    SETTINGS_PATH.write_text(
+        json.dumps({"base_directory": str(base_directory), "output_directory": str(output_directory)}, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
 
 
 class FaxSenderAutoProcessorApp:
-    def __init__(self, root: tk.Tk, initial_base: Path) -> None:
+    def __init__(self, root: tk.Tk, initial_base: Path, initial_output: Path | None = None) -> None:
         self.root = root
         self.root.overrideredirect(True)
-        self.root.geometry("920x610")
-        self.root.minsize(760, 540)
+        self.root.geometry("920x700")
+        self.root.minsize(760, 640)
         self.root.configure(bg=BG)
         # Tk can make the whole native window translucent. Child widgets are
         # intentionally dark/opaque so text remains readable over a desktop.
@@ -75,6 +78,8 @@ class FaxSenderAutoProcessorApp:
         self.events: queue.Queue[ProcessingResult] = queue.Queue()
         self.monitor: FolderMonitor | None = None
         self.base_directory = tk.StringVar(value=str(initial_base))
+        self.watch_directory = tk.StringVar(value=str(self._watch_directory()))
+        self.output_directory = tk.StringVar(value=str(initial_output or self._watch_directory()))
         self.status = tk.StringVar(value="대기 중")
         self.status_detail = tk.StringVar(value="감시를 시작하면 새 PDF를 자동으로 처리합니다.")
         self._drag_offset = (0, 0)
@@ -139,8 +144,17 @@ class FaxSenderAutoProcessorApp:
         tk.Label(folder_card, text="faxsender / 사용완료 / 오류 폴더가 자동으로 만들어집니다.", fg=MUTED, bg=CARD, font=("Malgun Gothic", 8)).pack(anchor="w", pady=(1, 8))
         folder_row = tk.Frame(folder_card, bg=CARD)
         folder_row.pack(fill="x")
-        tk.Entry(folder_row, textvariable=self.base_directory, bg="#09111a", fg=TEXT, insertbackground=TEXT, relief="flat", font=("Consolas", 9), highlightthickness=1, highlightbackground="#344257", highlightcolor=ACCENT).pack(side="left", fill="x", expand=True, ipady=7)
+        tk.Entry(folder_row, textvariable=self.watch_directory, state="readonly", readonlybackground="#09111a", fg=TEXT, relief="flat", font=("Consolas", 9), highlightthickness=1, highlightbackground="#344257").pack(side="left", fill="x", expand=True, ipady=7)
         self._button(folder_row, "폴더 선택", self._choose_directory, "#23344a", padx=15, pady=7).pack(side="left", padx=(8, 0))
+
+        output_card = tk.Frame(content, bg=CARD, highlightbackground=BORDER, highlightthickness=1, padx=15, pady=10)
+        output_card.pack(fill="x", pady=(10, 0))
+        tk.Label(output_card, text="완성본 저장 폴더", fg=TEXT, bg=CARD, font=("Malgun Gothic", 10, "bold")).pack(anchor="w")
+        tk.Label(output_card, text="처음에는 감시 폴더에 저장됩니다. 원하는 폴더로 따로 변경할 수 있습니다.", fg=MUTED, bg=CARD, font=("Malgun Gothic", 8)).pack(anchor="w", pady=(1, 7))
+        output_row = tk.Frame(output_card, bg=CARD)
+        output_row.pack(fill="x")
+        tk.Entry(output_row, textvariable=self.output_directory, bg="#09111a", fg=TEXT, insertbackground=TEXT, relief="flat", font=("Consolas", 9), highlightthickness=1, highlightbackground="#344257", highlightcolor=ACCENT).pack(side="left", fill="x", expand=True, ipady=6)
+        self._button(output_row, "저장 폴더 선택", self._choose_output_directory, "#23344a", padx=12, pady=6).pack(side="left", padx=(8, 0))
 
         controls = tk.Frame(content, bg=PANEL)
         controls.pack(fill="x", pady=14)
@@ -182,7 +196,19 @@ class FaxSenderAutoProcessorApp:
     def _choose_directory(self) -> None:
         selected = filedialog.askdirectory(initialdir=self.base_directory.get() or str(default_base_directory()))
         if selected:
+            old_watch_directory = self._watch_directory()
             self.base_directory.set(selected)
+            new_watch_directory = self._watch_directory()
+            self.watch_directory.set(str(new_watch_directory))
+            # Keep the original default behaviour when the user has not
+            # chosen a custom destination yet.
+            if Path(self.output_directory.get()).expanduser() == old_watch_directory:
+                self.output_directory.set(str(new_watch_directory))
+
+    def _choose_output_directory(self) -> None:
+        selected = filedialog.askdirectory(initialdir=self.output_directory.get() or str(self._watch_directory()))
+        if selected:
+            self.output_directory.set(selected)
 
     def _watch_directory(self) -> Path:
         base = Path(self.base_directory.get()).expanduser()
@@ -201,12 +227,16 @@ class FaxSenderAutoProcessorApp:
         if not base.exists() or not base.is_dir():
             messagebox.showerror("폴더 오류", "유효한 상위 폴더를 선택해 주세요.")
             return
-        save_settings(base)
-        processor = FolderProcessor(self._watch_directory(), template_id=DEFAULT_TEMPLATE_ID)
+        output_directory = Path(self.output_directory.get()).expanduser()
+        if not output_directory:
+            output_directory = self._watch_directory()
+            self.output_directory.set(str(output_directory))
+        save_settings(base, output_directory)
+        processor = FolderProcessor(self._watch_directory(), template_id=DEFAULT_TEMPLATE_ID, output_dir=output_directory)
         processor.ensure_directories()
         self.monitor = FolderMonitor(processor, self.events.put)
         self.monitor.start()
-        self._set_status("감시 중", f"{processor.root} 폴더에서 새 PDF를 기다리고 있습니다.", GREEN)
+        self._set_status("감시 중", f"입력: {processor.root} / 완성본: {processor.output_dir}", GREEN)
         self._write_log("폴더 감시를 시작했습니다.")
 
     def stop(self) -> None:
@@ -245,8 +275,10 @@ def main() -> None:
     arguments, _ = parser.parse_known_args()
     settings = load_settings()
     initial = Path(arguments.watch_root or str(settings.get("base_directory") or default_base_directory()))
+    saved_output = settings.get("output_directory")
+    initial_output = Path(str(saved_output)) if saved_output else None
     root = tk.Tk()
-    app = FaxSenderAutoProcessorApp(root, initial)
+    app = FaxSenderAutoProcessorApp(root, initial, initial_output)
     app.start()
     root.mainloop()
 
