@@ -19,14 +19,25 @@ from backend.services.file_normalizer import normalize_to_pdf
 
 
 def _configure_tesseract() -> None:
-    if settings.tesseract_cmd:
-        pytesseract.pytesseract.tesseract_cmd = settings.tesseract_cmd
+    # The desktop build ships its own Tesseract binary and Korean language
+    # data.  Prefer the explicitly configured portable path so a new PC never
+    # falls back to a developer machine's global installation (or PATH).
+    configured_cmd = os.environ.get("TESSERACT_CMD") or settings.tesseract_cmd
+    if configured_cmd and Path(configured_cmd).is_file():
+        pytesseract.pytesseract.tesseract_cmd = configured_cmd
     else:
+        bundled_cmd = settings.root_dir / "Tesseract-OCR" / "tesseract.exe"
         default_cmd = Path("C:/Program Files/Tesseract-OCR/tesseract.exe")
-        if default_cmd.exists():
+        if bundled_cmd.is_file():
+            pytesseract.pytesseract.tesseract_cmd = str(bundled_cmd)
+        elif default_cmd.is_file():
             pytesseract.pytesseract.tesseract_cmd = str(default_cmd)
-    if settings.tessdata_dir.exists() and not os.environ.get("TESSDATA_PREFIX"):
-        os.environ["TESSDATA_PREFIX"] = str(settings.tessdata_dir)
+
+    if settings.tessdata_dir.exists():
+        korean_data = settings.tessdata_dir / "kor.traineddata"
+        if korean_data.is_file():
+            # Do not inherit an invalid machine-wide TESSDATA_PREFIX.
+            os.environ["TESSDATA_PREFIX"] = str(settings.tessdata_dir)
 
 
 _configure_tesseract()
