@@ -17,6 +17,7 @@ SetupIconFile=..\auto_processor\assets\faxsender.ico
 
 [Files]
 Source: "..\dist\FaxSenderAutoProcessor\*"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion
+Source: "..\auto_processor\assets\faxsender.ico"; DestDir: "{app}"; Flags: ignoreversion
 
 [Code]
 var
@@ -42,8 +43,8 @@ begin
 end;
 
 [Icons]
-Name: "{autoprograms}\{#AppName}"; Filename: "{app}\{#AppExeName}"; IconFilename: "{app}\{#AppExeName}"
-Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExeName}"; IconFilename: "{app}\{#AppExeName}"; Tasks: desktopicon
+Name: "{autoprograms}\{#AppName}"; Filename: "{app}\{#AppExeName}"; IconFilename: "{app}\faxsender.ico"
+Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExeName}"; IconFilename: "{app}\faxsender.ico"; Tasks: desktopicon
 
 [Run]
 Filename: "{app}\{#AppExeName}"; Parameters: "--watch-root ""{code:GetWatchRoot}"""; Description: "{#AppName} 실행"; Flags: nowait postinstall skipifsilent
