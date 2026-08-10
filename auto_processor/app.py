@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import queue
+import shutil
 import sys
 import tkinter as tk
 from argparse import ArgumentParser
@@ -77,12 +78,14 @@ class FaxSenderAutoProcessorApp:
             pass
         self.events: queue.Queue[ProcessingResult] = queue.Queue()
         self.monitor: FolderMonitor | None = None
+        self._taskbar_minimizing = False
         self.base_directory = tk.StringVar(value=str(initial_base))
         self.watch_directory = tk.StringVar(value=str(self._watch_directory()))
         self.output_directory = tk.StringVar(value=str(initial_output or self._watch_directory()))
         self.status = tk.StringVar(value="대기 중")
         self.status_detail = tk.StringVar(value="감시를 시작하면 새 PDF를 자동으로 처리합니다.")
         self._drag_offset = (0, 0)
+        self.root.bind("<Map>", self._restore_from_taskbar, add="+")
         self._build()
         self.root.after(400, self._drain_events)
         self.root.protocol("WM_DELETE_WINDOW", self._close)
@@ -161,6 +164,7 @@ class FaxSenderAutoProcessorApp:
         self._button(controls, "▶  감시 시작", self.start, "#6d3cbb", padx=18, pady=9).pack(side="left")
         self._button(controls, "■  감시 중지", self.stop, "#263447", padx=15, pady=9).pack(side="left", padx=7)
         self._button(controls, "▣  완성본 폴더 열기", self.open_output_folder, PANEL, foreground="#b9c9dd", padx=13, pady=9).pack(side="left")
+        self._button(controls, "모두 삭제", self.clear_all_folders, "#542834", foreground="#ffd8dd", padx=13, pady=9).pack(side="left", padx=(7, 0))
 
         status_card = tk.Frame(content, bg="#0b1e26", highlightbackground="#1b5363", highlightthickness=1, padx=14, pady=10)
         status_card.pack(fill="x")
@@ -184,9 +188,21 @@ class FaxSenderAutoProcessorApp:
         self.root.geometry(f"+{event.x_root - self._drag_offset[0]}+{event.y_root - self._drag_offset[1]}")
 
     def _minimize(self) -> None:
+        # Borderless Tk windows are hidden from the taskbar.  Temporarily
+        # restore native decorations while minimized, then return to the nude
+        # layout when the user restores the window from the taskbar.
+        self._taskbar_minimizing = True
         self.root.overrideredirect(False)
         self.root.iconify()
-        self.root.bind("<Map>", lambda _event: self.root.overrideredirect(True), add="+")
+
+    def _restore_from_taskbar(self, _event: tk.Event) -> None:
+        if self._taskbar_minimizing:
+            self.root.after_idle(self._finish_taskbar_restore)
+
+    def _finish_taskbar_restore(self) -> None:
+        if self._taskbar_minimizing and self.root.state() == "normal":
+            self.root.overrideredirect(True)
+            self._taskbar_minimizing = False
 
     def _set_status(self, title: str, detail: str, color: str) -> None:
         self.status.set(title)
@@ -251,6 +267,77 @@ class FaxSenderAutoProcessorApp:
             directory = self._watch_directory()
         directory.mkdir(parents=True, exist_ok=True)
         os.startfile(directory)  # type: ignore[attr-defined]
+
+    @staticmethod
+    def _clear_directory_contents(directory: Path, preserve_names: set[str] | None = None) -> int:
+        """Delete only children of a confirmed directory, never the directory itself."""
+        preserved = preserve_names or set()
+        if not directory.exists():
+            directory.mkdir(parents=True, exist_ok=True)
+            return 0
+        removed = 0
+        for child in directory.iterdir():
+            if child.name in preserved:
+                continue
+            if child.is_symlink() or child.is_file():
+                child.unlink()
+            elif child.is_dir():
+                shutil.rmtree(child)
+            removed += 1
+        return removed
+
+    def clear_all_folders(self) -> None:
+        watch_directory = self._watch_directory().resolve()
+        completed_directory = watch_directory / "사용완료"
+        failed_directory = watch_directory / "오류"
+        output_directory = Path(self.output_directory.get()).expanduser().resolve()
+
+        # Never let the destructive action empty a broad parent folder such
+        # as Documents. A custom output path must be a dedicated folder.
+        if output_directory != watch_directory and watch_directory.is_relative_to(output_directory):
+            messagebox.showerror(
+                "삭제할 수 없는 폴더",
+                "완성본 저장 폴더가 faxsender의 상위 폴더입니다.\n"
+                "모두 삭제를 사용하려면 전용 완성본 폴더를 지정해 주세요.",
+            )
+            return
+
+        if not messagebox.askyesno(
+            "모두 삭제",
+            "다음 폴더 안의 파일을 모두 삭제합니다.\n\n"
+            f"완성본: {output_directory}\n"
+            f"사용완료: {completed_directory}\n"
+            f"오류: {failed_directory}\n\n"
+            "이 작업은 되돌릴 수 없습니다. 계속할까요?",
+            icon="warning",
+        ):
+            return
+
+        was_running = bool(self.monitor and self.monitor.running)
+        if was_running:
+            self.stop()
+
+        try:
+            removed = 0
+            if output_directory == watch_directory:
+                removed += self._clear_directory_contents(
+                    output_directory,
+                    {completed_directory.name, failed_directory.name, ".faxsender-processed.json"},
+                )
+            else:
+                removed += self._clear_directory_contents(output_directory)
+            removed += self._clear_directory_contents(completed_directory)
+            removed += self._clear_directory_contents(failed_directory)
+            self._write_log(f"모두 삭제 완료: {removed}개 항목을 지웠습니다.")
+            if was_running:
+                self.start()
+            else:
+                self._set_status("삭제 완료", f"완성본·사용완료·오류 폴더에서 {removed}개 항목을 지웠습니다.", GREEN)
+        except OSError as exc:
+            self._set_status("삭제 실패", str(exc), RED)
+            self._write_log(f"모두 삭제 실패: {exc}")
+            if was_running:
+                self.start()
 
     def _drain_events(self) -> None:
         try:
