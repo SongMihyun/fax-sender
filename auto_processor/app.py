@@ -19,8 +19,16 @@ def _resource_root() -> Path:
 os.environ.setdefault("FAX_SENDER_ROOT", str(_resource_root()))
 _portable_tesseract = _resource_root() / "Tesseract-OCR" / "tesseract.exe"
 if _portable_tesseract.exists():
-    os.environ.setdefault("TESSERACT_CMD", str(_portable_tesseract))
-    os.environ.setdefault("TESSDATA_PREFIX", str(_portable_tesseract.parent / "tessdata"))
+    # The bundled executable folder only ships the English defaults, while
+    # the application bundle carries Korean data under tools/tessdata.  Point
+    # both variables at the packaged resources explicitly so a user's system
+    # OCR installation cannot silently make customer-name extraction empty.
+    os.environ["TESSERACT_CMD"] = str(_portable_tesseract)
+    _portable_tessdata = _resource_root() / "tools" / "tessdata"
+    if (_portable_tessdata / "kor.traineddata").exists():
+        os.environ["TESSDATA_PREFIX"] = str(_portable_tessdata)
+    else:
+        os.environ["TESSDATA_PREFIX"] = str(_portable_tesseract.parent / "tessdata")
 
 from auto_processor.folder_processor import DEFAULT_TEMPLATE_ID, FolderMonitor, FolderProcessor, ProcessingResult  # noqa: E402
 
