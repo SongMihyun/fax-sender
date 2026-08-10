@@ -147,10 +147,15 @@ async function renderPageCanvas(page: pdfjs.PDFPageProxy, scale: number): Promis
   return canvas;
 }
 
-async function ocrPositionText(pageCanvas: HTMLCanvasElement, page: pdfjs.PDFPageProxy, position: TemplatePosition, scale: number): Promise<string> {
-  const viewport = page.getViewport({ scale });
-  const [x0, y0] = viewport.convertToViewportPoint(position.x, position.y);
-  const [x1, y1] = viewport.convertToViewportPoint(position.x + position.width, position.y + position.height);
+async function ocrPositionText(pageCanvas: HTMLCanvasElement, position: TemplatePosition, scale: number): Promise<string> {
+  // Template coordinates are stored from the top-left of the rendered PDF.
+  // The OCR canvas uses that same coordinate system, so converting through
+  // PDF.js (which expects bottom-left PDF coordinates) would mirror the crop
+  // vertically and read a different field on scanned PDFs.
+  const x0 = position.x * scale;
+  const y0 = position.y * scale;
+  const x1 = (position.x + position.width) * scale;
+  const y1 = (position.y + position.height) * scale;
   const padding = 6;
   const left = Math.max(0, Math.min(x0, x1) - padding);
   const top = Math.max(0, Math.min(y0, y1) - padding);
@@ -336,7 +341,7 @@ export async function extractBatchFormValuesFromPdf(file: File, template: PdfTem
             ocrPageCanvasCache.set(targetPage, pageCanvasPromise);
           }
           const pageCanvas = await pageCanvasPromise;
-          rawText = await ocrPositionText(pageCanvas, page, position, OCR_RENDER_SCALE);
+          rawText = await ocrPositionText(pageCanvas, position, OCR_RENDER_SCALE);
         }
 
         const nextValue = normalizeExtractedField(field, rawText, fallback[field]);
