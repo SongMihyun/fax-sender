@@ -15,6 +15,7 @@ from backend.database.db import get_conn, now_iso
 from backend.models.schemas import ExtractFieldRequest, TemplateMergeRequest, TemplateMergeResponse
 from backend.services.app_module_service import run_pdf_merge_engine
 from backend.services.document_service import extract_document_fields_detail, get_document
+from backend.services.page_registration_service import align_positions_to_document
 from backend.services.fax_effect_service import apply_fax_effect
 from backend.services.template_service import get_template
 
@@ -149,6 +150,7 @@ def extract_template_batch_fields_detail(template_id: int, document_id_override:
             for position in base_positions
             if int(position.get("page", 1)) + page_offset <= source_page_count
         ]
+        group_positions = align_positions_to_document(pdf_path, group_positions)
         detail = _extract_fields_from_positions(target_document_id, group_positions)
         items.append(
             {
