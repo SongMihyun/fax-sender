@@ -1,6 +1,7 @@
 """Page-relative placement for scanned consent forms.
 
-Coordinates in a template are authored against an A4 reference page.  Some
+Coordinates in this template are authored against the original Letter-size
+form. Some
 scanners keep the A4 PDF size but shift or slightly scale the printed form
 inside that page.  The Heungkuk form contains four black corner registration
 marks, so use them when present to map template coordinates to the actual
@@ -18,16 +19,17 @@ import fitz
 import numpy as np
 
 
-REFERENCE_A4_WIDTH = 595.32
-REFERENCE_A4_HEIGHT = 841.92
-# Centres of the four black registration marks in the reference Heungkuk A4
-# sheet.  They are deliberately page-relative rather than screen-pixel based.
+REFERENCE_TEMPLATE_WIDTH = 612.0
+REFERENCE_TEMPLATE_HEIGHT = 792.0
+# Centres of the four black registration marks in the original Letter-size
+# Heungkuk sheet. They are deliberately page-relative rather than
+# screen-pixel based. A4 printer output is a scaled instance of this form.
 REFERENCE_MARKERS = np.float32(
     [
-        [28.5, 16.8],
-        [564.3, 18.0],
-        [27.2, 768.5],
-        [562.8, 769.8],
+        [27.75, 15.25],
+        [580.5, 15.25],
+        [27.75, 724.5],
+        [580.5, 724.5],
     ]
 )
 
@@ -59,8 +61,8 @@ def align_positions_to_document(pdf_path: Path, positions: list[dict[str, Any]])
 
 def _transform_position(position: dict[str, Any], page_rect: fitz.Rect, matrix: np.ndarray | None) -> dict[str, Any]:
     result = dict(position)
-    scale_x = page_rect.width / REFERENCE_A4_WIDTH
-    scale_y = page_rect.height / REFERENCE_A4_HEIGHT
+    scale_x = page_rect.width / REFERENCE_TEMPLATE_WIDTH
+    scale_y = page_rect.height / REFERENCE_TEMPLATE_HEIGHT
     x = float(position["x"]) * scale_x
     y = float(position["y"]) * scale_y
     width = float(position["width"]) * scale_x
@@ -101,8 +103,8 @@ def _registration_matrix(page: fitz.Page) -> np.ndarray | None:
         candidates.append((float(centre_x) / render_scale, float(centre_y) / render_scale))
 
     expected = REFERENCE_MARKERS.copy()
-    expected[:, 0] *= page.rect.width / REFERENCE_A4_WIDTH
-    expected[:, 1] *= page.rect.height / REFERENCE_A4_HEIGHT
+    expected[:, 0] *= page.rect.width / REFERENCE_TEMPLATE_WIDTH
+    expected[:, 1] *= page.rect.height / REFERENCE_TEMPLATE_HEIGHT
     detected: list[tuple[float, float]] = []
     maximum_distance = min(page.rect.width, page.rect.height) * 0.12
     for expected_x, expected_y in expected:

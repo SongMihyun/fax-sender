@@ -150,7 +150,6 @@ def extract_template_batch_fields_detail(template_id: int, document_id_override:
             for position in base_positions
             if int(position.get("page", 1)) + page_offset <= source_page_count
         ]
-        group_positions = align_positions_to_document(pdf_path, group_positions)
         detail = _extract_fields_from_positions(target_document_id, group_positions)
         items.append(
             {
@@ -621,13 +620,17 @@ def merge_template_pdf(template_id: int, payload: TemplateMergeRequest, document
 
     for group_index in range(batch_count):
         page_offset = group_index * group_page_count
-        group_positions = [
+        source_group_positions = [
             _position_with_offset(position, page_offset, group_index, force_suffix=batch_count > 1)
             for position in base_positions
             if int(position.get("page", 1)) + page_offset <= source_page_count
         ]
+        # Keep the known-good OCR rectangles in their original coordinates,
+        # while rendering checks/names/signatures against the registered page
+        # so Letter and A4 output share the same printed locations.
+        group_positions = align_positions_to_document(pdf_path, source_group_positions)
         extract_detail = (
-            _extract_fields_from_positions(target_document_id, group_positions)
+            _extract_fields_from_positions(target_document_id, source_group_positions)
             if payload.options.auto_extract
             else {"fields": {}, "raw_fields": {}, "warnings": {}}
         )
