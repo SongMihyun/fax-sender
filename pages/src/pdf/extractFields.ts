@@ -129,7 +129,9 @@ function correctHieutIeungConfusion(cropCanvas: HTMLCanvasElement, page: Tessera
     const code = char.charCodeAt(0) - 0xac00;
     const isHieut = Math.floor(code / 588) === HIEUT_INDEX;
     const shouldBeHieut = hasHieutCapStroke(cropCanvas, symbol.bbox);
-    return shouldBeHieut === isHieut ? char : swapped;
+    // A neighboring line or glyph can look like a ㅎ cap. Keep a recognized
+    // ㅇ intact; only repair the safer ㅎ -> ㅇ direction.
+    return isHieut && !shouldBeHieut ? swapped : char;
   });
   return correctedChars.join("").trim();
 }

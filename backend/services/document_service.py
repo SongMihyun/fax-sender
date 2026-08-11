@@ -434,7 +434,12 @@ def _correct_hieut_ieung_confusion(image: Image.Image, text: str, data: dict) ->
         char_crop = image.crop((max(0, left), y0, min(image.width, right), y1))
         should_be_hieut = _has_hieut_cap_stroke(char_crop)
         is_hieut = (ord(char) - 0xAC00) // 588 == HIEUT_INDEX
-        candidate = swapped if should_be_hieut != is_hieut else char
+        # Never turn a confidently recognized ㅇ into ㅎ automatically.
+        # The cap-stroke heuristic is intentionally conservative, but printed
+        # forms can put a separator or neighboring glyph into its crop. That
+        # false positive changed the already-correct "이원일" to "히훤힐".
+        # Correct only the safer direction: an OCR-produced ㅎ with no cap.
+        candidate = swapped if is_hieut and not should_be_hieut else char
         if should_be_hieut and _medial_index(candidate) == YEO_MEDIAL_INDEX and _has_ye_right_facing_bars(char_crop):
             candidate = _replace_medial(candidate, YE_MEDIAL_INDEX)
         if candidate != char:
