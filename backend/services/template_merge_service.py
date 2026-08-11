@@ -34,6 +34,37 @@ FIELD_LABELS = {
 EXTRACT_FIELD_KEYS = {"customer_name", "manager_name", "manager_code"}
 
 
+def _is_korean_person_name(value: Any) -> bool:
+    return bool(re.fullmatch(r"[가-힣]{2,5}", str(value or "").strip()))
+
+
+def _restore_customer_name_from_source(
+    normalized_detail: dict[str, dict[str, str]], source_detail: dict[str, dict[str, str]]
+) -> dict[str, dict[str, str]]:
+    """Keep canonical OCR by default, with a sharp-source fallback for names.
+
+    Normalizing is required for stable drawing coordinates.  A source that is
+    already the correct Letter size, however, can lose fine Hangul strokes
+    after an unnecessary raster round trip.  Only use the original PDF when
+    the normalized result is not a plausible Korean customer name and the
+    original result is.
+    """
+    normalized_name = normalized_detail.get("fields", {}).get("customer_name", "")
+    source_name = source_detail.get("fields", {}).get("customer_name", "")
+    if _is_korean_person_name(normalized_name) or not _is_korean_person_name(source_name):
+        return normalized_detail
+
+    result = {
+        "fields": dict(normalized_detail.get("fields", {})),
+        "raw_fields": dict(normalized_detail.get("raw_fields", {})),
+        "warnings": dict(normalized_detail.get("warnings", {})),
+    }
+    result["fields"]["customer_name"] = source_name
+    result["raw_fields"]["customer_name"] = source_detail.get("raw_fields", {}).get("customer_name", source_name)
+    result["warnings"]["customer_name"] = "정규화 OCR에서 한글 이름을 찾지 못해 원본 PDF OCR 결과를 사용했습니다."
+    return result
+
+
 def _positions(template) -> list[dict[str, Any]]:
     pages = template.overlay_config.get("pages", {})
     positions: list[dict[str, Any]] = []
@@ -659,7 +690,10 @@ def merge_template_pdf(template_id: int, payload: TemplateMergeRequest, document
             if int(position.get("page", 1)) + page_offset <= source_page_count
         ]
         extract_detail = (
-            _extract_fields_from_pdf_path(normalized_pdf_path, source_group_positions)
+            _restore_customer_name_from_source(
+                _extract_fields_from_pdf_path(normalized_pdf_path, source_group_positions),
+                _extract_fields_from_pdf_path(pdf_path, source_group_positions),
+            )
             if payload.options.auto_extract
             else {"fields": {}, "raw_fields": {}, "warnings": {}}
         )
@@ -670,6 +704,18 @@ def merge_template_pdf(template_id: int, payload: TemplateMergeRequest, document
             overrides = {key: value for key, value in payload_form_data.items() if key not in EXTRACT_FIELD_KEYS}
         form_data = {**template.form_data, **extracted, **overrides}
         form_data.setdefault("date", datetime.now().strftime("%Y.%m.%d"))
+        if any(position.get("type") in {"signature", "name"} for position in source_group_positions) and not _is_korean_person_name(
+            form_data.get("customer_name")
+        ):
+            raw_customer_name = str(extract_detail.get("raw_fields", {}).get("customer_name", "")).strip()
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "고객명 OCR 결과에서 한글 이름을 확인하지 못해 이름·서명 합성을 중단했습니다. "
+                    f"인식값: {raw_customer_name or '(비어 있음)'}. "
+                    "고객명 인쇄 영역이 선명한지 확인한 뒤 다시 처리해 주세요."
+                ),
+            )
         group_overlays = [
             overlay
             for overlay in (_overlay_for_position(position, form_data, profile) for position in source_group_positions)

@@ -463,18 +463,36 @@ def _ocr_pdf_region(pdf_path: Path, field: ExtractFieldRequest, zoom: float = 6.
     image = _ocr_crop(pdf_path, field, zoom, padding)
     if image is None:
         return "", None
+    def recognize(target: Image.Image) -> tuple[str, dict]:
+        recognized = pytesseract.image_to_string(target, lang="kor+eng", config="--psm 7")
+        recognized_data = pytesseract.image_to_data(
+            target, lang="kor+eng", config="--psm 7", output_type=pytesseract.Output.DICT
+        )
+        recognized = re.sub(r"\s+", " ", recognized).strip()
+        if not recognized:
+            recognized = pytesseract.image_to_string(target, lang="kor+eng", config="--psm 6")
+            recognized_data = pytesseract.image_to_data(
+                target, lang="kor+eng", config="--psm 6", output_type=pytesseract.Output.DICT
+            )
+            recognized = re.sub(r"\s+", " ", recognized).strip()
+        return recognized, recognized_data
+
     try:
         # Most registered regions contain one line.  Some scans, however,
         # shift a separator line into the crop; PSM 7 then reports no text at
         # all despite the name being visible.  Retry only that empty case with
         # the compact multi-line mode rather than dropping the field.
-        text = pytesseract.image_to_string(image, lang="kor+eng", config="--psm 7")
-        data = pytesseract.image_to_data(image, lang="kor+eng", config="--psm 7", output_type=pytesseract.Output.DICT)
-        text = re.sub(r"\s+", " ", text).strip()
-        if not text:
-            text = pytesseract.image_to_string(image, lang="kor+eng", config="--psm 6")
-            data = pytesseract.image_to_data(image, lang="kor+eng", config="--psm 6", output_type=pytesseract.Output.DICT)
-            text = re.sub(r"\s+", " ", text).strip()
+        text, data = recognize(image)
+        # Some issuer PDFs put the customer-name label on the upper edge of
+        # this historical rectangle. If that first OCR result contains no
+        # Korean name, retry only the lower name line instead of treating
+        # nearby label/table text as the customer. (e.g. 조원국 -> "es")
+        if field.field_key == "customer_name" and not re.search(r"[가-힣]{2,5}", text):
+            lower_start = round(image.height * 0.34)
+            lower_image = image.crop((0, lower_start, image.width, image.height))
+            lower_text, lower_data = recognize(lower_image)
+            if re.search(r"[가-힣]{2,5}", lower_text):
+                image, text, data = lower_image, lower_text, lower_data
     except pytesseract.TesseractNotFoundError:
         return "", None
     if not text:

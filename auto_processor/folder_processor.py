@@ -7,6 +7,7 @@ import os
 import shutil
 import threading
 import time
+import traceback
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
@@ -154,13 +155,17 @@ class FolderProcessor:
             return ProcessingResult(source=source, output=None, archived_source=None)
 
         document_id: int | None = None
+        stage = "초기화"
         try:
+            stage = "처리 환경 초기화"
             init_db()
             self._ensure_heungkuk_template()
+            stage = "원본 PDF 등록"
             with source.open("rb") as handle:
                 upload = UploadFile(filename=source.name, file=handle)
                 document = asyncio.run(save_process_upload(upload))
             document_id = document.id
+            stage = "PDF 정규화·OCR·합성"
             result = merge_template_pdf(
                 self.template_id,
                 TemplateMergeRequest(),
@@ -170,8 +175,10 @@ class FolderProcessor:
             if not result.success or not generated.exists():
                 raise RuntimeError("PDF 합성 결과 파일을 만들지 못했습니다.")
 
+            stage = "완성본 이동"
             destination = self._unique_destination(self.output_dir, result.output_filename)
             shutil.move(str(generated), str(destination))
+            stage = "원본 사용완료 보관"
             archived = self._unique_destination(self.completed_dir, source.name)
             shutil.move(str(source), str(archived))
             self._processed.add(source_hash)
@@ -186,7 +193,27 @@ class FolderProcessor:
             try:
                 if source.exists():
                     shutil.move(str(source), str(failed))
-                (failed.with_suffix(failed.suffix + ".error.txt")).write_text(str(exc), encoding="utf-8")
+                details = [
+                    "FaxSender 자동처리 오류 보고서",
+                    "",
+                    f"발생 시각: {now_iso()}",
+                    f"원본 파일: {source.name}",
+                    f"처리 단계: {stage}",
+                    f"오류 유형: {type(exc).__name__}",
+                    f"오류 내용: {exc}",
+                ]
+                if "customer_name" in str(exc):
+                    details.extend(
+                        [
+                            "",
+                            "원인 안내: 고객명 OCR 결과에 한글 이름이 없어 이름·서명 생성을 중단했습니다.",
+                            "다음 조치: 고객명 인쇄 영역이 선명한지 확인하고, 최신 버전으로 다시 처리해 주세요.",
+                        ]
+                    )
+                details.extend(["", "기술 정보 (지원 요청 시 함께 전달):", traceback.format_exc().strip()])
+                # BOM makes Korean readable in Windows Notepad without a
+                # manual encoding selection.
+                (failed.with_suffix(failed.suffix + ".error.txt")).write_text("\n".join(details), encoding="utf-8-sig")
             except OSError:
                 pass
             return ProcessingResult(source=source, output=None, archived_source=None, error=str(exc))
