@@ -12,11 +12,14 @@ from __future__ import annotations
 
 from collections import defaultdict
 from pathlib import Path
+import tempfile
 from typing import Any
 
 import cv2
 import fitz
 import numpy as np
+
+from backend.core.settings import settings
 
 
 REFERENCE_TEMPLATE_WIDTH = 612.0
@@ -32,6 +35,75 @@ REFERENCE_MARKERS = np.float32(
         [580.5, 724.5],
     ]
 )
+
+
+def normalize_pdf_to_template_page(pdf_path: Path) -> Path:
+    """Copy every source page onto the fixed Letter-sized template canvas.
+
+    The coordinate editor for this form was authored on a 612 x 792 point
+    Letter PDF.  PDFs that look identical can nevertheless be stored as A4,
+    Letter, or a scanner-specific page size.  Performing OCR and drawing on a
+    single normalized canvas removes that page-size ambiguity completely.
+    """
+    settings.tmp_dir.mkdir(parents=True, exist_ok=True)
+    handle = tempfile.NamedTemporaryFile(
+        prefix="faxsender_normalized_", suffix=".pdf", delete=False, dir=settings.tmp_dir
+    )
+    normalized_path = Path(handle.name)
+    handle.close()
+
+    source = fitz.open(pdf_path)
+    normalized = fitz.open()
+    try:
+        for page_number in range(source.page_count):
+            source_page = source[page_number]
+            page = normalized.new_page(
+                width=REFERENCE_TEMPLATE_WIDTH, height=REFERENCE_TEMPLATE_HEIGHT
+            )
+            image = _normalized_page_image(source_page)
+            encoded, png = cv2.imencode(".png", image)
+            if not encoded:
+                raise RuntimeError("Unable to encode normalized PDF page")
+            page.insert_image(page.rect, stream=png.tobytes())
+        normalized.save(normalized_path, garbage=4, deflate=True)
+    except Exception:
+        normalized_path.unlink(missing_ok=True)
+        raise
+    finally:
+        normalized.close()
+        source.close()
+    return normalized_path
+
+
+def _normalized_page_image(source_page: fitz.Page) -> np.ndarray:
+    """Rasterize and register a page on the canonical template canvas."""
+    render_scale = 3.0
+    pixmap = source_page.get_pixmap(
+        matrix=fitz.Matrix(render_scale, render_scale), colorspace=fitz.csRGB, alpha=False
+    )
+    image = np.frombuffer(pixmap.samples, dtype=np.uint8).reshape(pixmap.height, pixmap.width, 3)
+    target_size = (
+        round(REFERENCE_TEMPLATE_WIDTH * render_scale),
+        round(REFERENCE_TEMPLATE_HEIGHT * render_scale),
+    )
+    reference_to_source = _registration_matrix(source_page)
+    if reference_to_source is None:
+        # Some PDFs do not expose usable registration marks. They still get a
+        # deterministic Letter canvas instead of leaking their original A4 /
+        # scanner dimensions into the following OCR and overlay steps.
+        return cv2.resize(image, target_size, interpolation=cv2.INTER_CUBIC)
+
+    source_to_reference = cv2.invertAffineTransform(reference_to_source)
+    source_to_reference[0, :] *= REFERENCE_TEMPLATE_WIDTH / source_page.rect.width
+    source_to_reference[1, :] *= REFERENCE_TEMPLATE_HEIGHT / source_page.rect.height
+    return cv2.warpAffine(
+        image,
+        source_to_reference,
+        target_size,
+        flags=cv2.INTER_CUBIC,
+        borderMode=cv2.BORDER_CONSTANT,
+        borderValue=(255, 255, 255),
+    )
 
 
 def align_positions_to_document(pdf_path: Path, positions: list[dict[str, Any]]) -> list[dict[str, Any]]:

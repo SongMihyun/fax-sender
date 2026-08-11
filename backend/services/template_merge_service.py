@@ -14,8 +14,13 @@ from backend.core.settings import settings
 from backend.database.db import get_conn, now_iso
 from backend.models.schemas import ExtractFieldRequest, TemplateMergeRequest, TemplateMergeResponse
 from backend.services.app_module_service import run_pdf_merge_engine
-from backend.services.document_service import extract_document_fields_detail, get_document
-from backend.services.page_registration_service import align_positions_to_document
+from backend.services.document_service import (
+    extract_document_fields_detail,
+    extract_text_with_ocr_fallback,
+    get_document,
+    sanitize_extracted_field,
+)
+from backend.services.page_registration_service import normalize_pdf_to_template_page
 from backend.services.fax_effect_service import apply_fax_effect
 from backend.services.template_service import get_template
 
@@ -97,6 +102,33 @@ def _extract_fields_from_positions(document_id: int, positions: list[dict[str, A
         if position.get("type") == "extract_text" and position.get("field_key")
     ]
     return extract_document_fields_detail(document_id, fields)
+
+
+def _extract_fields_from_pdf_path(pdf_path: Path, positions: list[dict[str, Any]]) -> dict[str, dict[str, str]]:
+    """Extract from the same normalized PDF that will receive overlays."""
+    clean_fields: dict[str, str] = {}
+    raw_fields: dict[str, str] = {}
+    warnings: dict[str, str] = {}
+    for position in positions:
+        field_key = str(position.get("field_key", ""))
+        if position.get("type") != "extract_text" or not field_key:
+            continue
+        field = ExtractFieldRequest(
+            field_key=field_key,
+            page=int(position["page"]),
+            x=float(position["x"]),
+            y=float(position["y"]),
+            width=float(position["width"]),
+            height=float(position["height"]),
+            unit=str(position.get("unit", "pdf_point")),
+        )
+        raw_text, _ocr_confidence = extract_text_with_ocr_fallback(pdf_path, field)
+        clean_text, warning = sanitize_extracted_field(field_key, raw_text)
+        raw_fields[field_key] = raw_text
+        clean_fields[field_key] = clean_text
+        if warning:
+            warnings[field_key] = warning
+    return {"fields": clean_fields, "raw_fields": raw_fields, "warnings": warnings}
 
 
 def _extract_fields_from_template_detail(template, document_id: int | None = None) -> dict[str, dict[str, str]]:
@@ -605,8 +637,9 @@ def merge_template_pdf(template_id: int, payload: TemplateMergeRequest, document
     if not pdf_path.exists():
         raise HTTPException(status_code=404, detail="원본 PDF 파일을 찾을 수 없습니다.")
 
+    normalized_pdf_path = normalize_pdf_to_template_page(pdf_path)
     base_positions = _positions(template)
-    source_page_count = _page_count(pdf_path)
+    source_page_count = _page_count(normalized_pdf_path)
     group_page_count = _template_group_page_count(template, base_positions)
     batch_count = _batch_count_for_pdf(source_page_count, group_page_count)
     profile = _pick_style_profile(template.render_style)
@@ -625,12 +658,8 @@ def merge_template_pdf(template_id: int, payload: TemplateMergeRequest, document
             for position in base_positions
             if int(position.get("page", 1)) + page_offset <= source_page_count
         ]
-        # Keep the known-good OCR rectangles in their original coordinates,
-        # while rendering checks/names/signatures against the registered page
-        # so Letter and A4 output share the same printed locations.
-        group_positions = align_positions_to_document(pdf_path, source_group_positions)
         extract_detail = (
-            _extract_fields_from_positions(target_document_id, source_group_positions)
+            _extract_fields_from_pdf_path(normalized_pdf_path, source_group_positions)
             if payload.options.auto_extract
             else {"fields": {}, "raw_fields": {}, "warnings": {}}
         )
@@ -643,10 +672,10 @@ def merge_template_pdf(template_id: int, payload: TemplateMergeRequest, document
         form_data.setdefault("date", datetime.now().strftime("%Y.%m.%d"))
         group_overlays = [
             overlay
-            for overlay in (_overlay_for_position(position, form_data, profile) for position in group_positions)
+            for overlay in (_overlay_for_position(position, form_data, profile) for position in source_group_positions)
             if overlay is not None
         ]
-        all_positions.extend(group_positions)
+        all_positions.extend(source_group_positions)
         overlays.extend(group_overlays)
         if first_form_data is None:
             first_form_data = dict(form_data)
@@ -676,7 +705,7 @@ def merge_template_pdf(template_id: int, payload: TemplateMergeRequest, document
     form_data_path = _write_json_tmp(f"template_{template_id}_form_data_", merge_form_data)
 
     try:
-        result_path = run_pdf_merge_engine(pdf_path=pdf_path, overlay_config_path=overlay_path, form_data_path=form_data_path, output_path=output_path)
+        result_path = run_pdf_merge_engine(pdf_path=normalized_pdf_path, overlay_config_path=overlay_path, form_data_path=form_data_path, output_path=output_path)
         if profile.get("fax_effect"):
             result_path = apply_fax_effect(Path(result_path), profile.get("fax_effect_config", {}), seed=int(profile["style_seed"]))
     finally:
@@ -684,6 +713,7 @@ def merge_template_pdf(template_id: int, payload: TemplateMergeRequest, document
             [
                 overlay_path,
                 form_data_path,
+                normalized_pdf_path,
                 *(
                     Path(overlay["image_path"])
                     for overlay in overlays
