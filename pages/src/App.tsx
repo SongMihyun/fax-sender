@@ -4,6 +4,7 @@ import { processPdfWithLocalEngine } from "./pdf/localEngine";
 import { extractBatchFormValuesFromPdf } from "./pdf/extractFields";
 import { chooseSaveDirectory, saveProcessedPdf } from "./pdf/fileSave";
 import { processPdfInBrowser } from "./pdf/processor";
+import { normalizePdfForTemplate } from "./pdf/normalizeTemplatePdf";
 import { bundledTemplates, loadActiveTemplate, type TemplateCatalogItem } from "./templates/catalog";
 import type { CheckDarkness, FormValues, ProcessedPdf, ProcessingOptions } from "./types";
 import "./styles.css";
@@ -148,6 +149,7 @@ function App() {
       }
 
       let extractedValues = [inferValues(nextFile)];
+      let normalizedFile = nextFile;
 
       for (let index = 0; index < initialSteps.length; index += 1) {
         setStepStatus(index, "running");
@@ -157,14 +159,18 @@ function App() {
           throw new Error("GitHub Pages 버전은 서버 변환 기능이 없어 PDF만 처리할 수 있습니다.");
         }
 
+        if (index === 1) {
+          normalizedFile = await normalizePdfForTemplate(nextFile);
+        }
+
         if (index === 2) {
-          extractedValues = await extractBatchFormValuesFromPdf(nextFile, selectedTemplate, extractedValues[0]);
+          extractedValues = await extractBatchFormValuesFromPdf(normalizedFile, selectedTemplate, extractedValues[0]);
         }
 
         setStepStatus(index, "done");
       }
 
-      const processed = await processPdfInBrowser(nextFile, selectedTemplate, extractedValues, { ...options, checkDarkness });
+      const processed = await processPdfInBrowser(normalizedFile, selectedTemplate, extractedValues, { ...options, checkDarkness });
       setResult(processed);
       setMessage(`최종 PDF 생성이 완료되었습니다. (${extractedValues.length}명)`);
     } catch (error) {
