@@ -407,41 +407,54 @@ def _correct_hieut_ieung_confusion(image: Image.Image, text: str, data: dict) ->
     if not hangul_chars:
         return text
 
-    boxes = [
-        (left, top, width, height)
-        for word, left, top, width, height in zip(data["text"], data["left"], data["top"], data["width"], data["height"])
-        if any("가" <= char <= "힣" for char in word)
-    ]
+    boxes: list[tuple[int, int, int, int, float]] = []
+    for word, left, top, width, height, confidence in zip(
+        data["text"], data["left"], data["top"], data["width"], data["height"], data["conf"]
+    ):
+        word_hangul = [char for char in word if "가" <= char <= "힣"]
+        if not word_hangul:
+            continue
+        # Tesseract often emits one word box per syllable. Preserve those
+        # exact boxes; only divide when it has grouped several syllables into
+        # a single word. The old whole-line split mixed table rules into the
+        # final character and lost the detached ㅎ cap of "현".
+        for index, _char in enumerate(word_hangul):
+            char_left = int(left + width * index / len(word_hangul))
+            char_right = int(left + width * (index + 1) / len(word_hangul))
+            try:
+                numeric_confidence = float(confidence)
+            except (TypeError, ValueError):
+                numeric_confidence = 0.0
+            boxes.append((char_left, int(top), max(1, char_right - char_left), int(height), numeric_confidence))
     if not boxes:
         return text
-
-    x0 = min(b[0] for b in boxes)
-    y0 = min(b[1] for b in boxes)
-    x1 = max(b[0] + b[2] for b in boxes)
-    y1 = max(b[1] + b[3] for b in boxes)
-    if x1 <= x0 or y1 <= y0:
-        return text
-
-    char_width = (x1 - x0) / len(hangul_chars)
     corrected = list(hangul_chars)
     changed = False
-    for index, char in enumerate(hangul_chars):
+    for index, (char, box) in enumerate(zip(hangul_chars, boxes)):
         swapped = _swap_hieut_ieung_initial(char)
         if swapped is None:
             continue
-        left = int(x0 + index * char_width)
-        right = int(x0 + (index + 1) * char_width)
-        char_crop = image.crop((max(0, left), y0, min(image.width, right), y1))
+        left, top, width, height, confidence = box
+        margin = max(1, round(min(width, height) * 0.05))
+        char_crop = image.crop(
+            (
+                max(0, left - margin),
+                max(0, top - margin),
+                min(image.width, left + width + margin),
+                min(image.height, top + height + margin),
+            )
+        )
         should_be_hieut = _has_hieut_cap_stroke(char_crop)
         is_hieut = (ord(char) - 0xAC00) // 588 == HIEUT_INDEX
-        # Never turn a confidently recognized ㅇ into ㅎ automatically.
-        # The cap-stroke heuristic is intentionally conservative, but printed
-        # forms can put a separator or neighboring glyph into its crop. That
-        # false positive changed the already-correct "이원일" to "히훤힐".
-        # Correct only the safer direction: an OCR-produced ㅎ with no cap.
-        candidate = swapped if is_hieut and not should_be_hieut else char
-        if should_be_hieut and _medial_index(candidate) == YEO_MEDIAL_INDEX and _has_ye_right_facing_bars(char_crop):
-            candidate = _replace_medial(candidate, YE_MEDIAL_INDEX)
+        # Never downgrade a recognized ㅎ. Conversely, upgrade ㅇ to ㅎ only
+        # when its own glyph box contains the detached top cap. This gives
+        # each syllable in a name an independent second visual check.
+        # The OCR engine itself is more reliable than the visual heuristic on
+        # a clean, high-confidence glyph. Use the second visual test only to
+        # rescue a low-confidence ㅇ. This prevents a round ㅇ (such as the
+        # first syllable in "이원일") from becoming ㅎ merely because its top
+        # arc looks like a horizontal stroke after scanning.
+        candidate = swapped if not is_hieut and confidence <= 75.0 and should_be_hieut else char
         if candidate != char:
             corrected[index] = candidate
             changed = True

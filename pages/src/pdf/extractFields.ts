@@ -129,9 +129,15 @@ function correctHieutIeungConfusion(cropCanvas: HTMLCanvasElement, page: Tessera
     const code = char.charCodeAt(0) - 0xac00;
     const isHieut = Math.floor(code / 588) === HIEUT_INDEX;
     const shouldBeHieut = hasHieutCapStroke(cropCanvas, symbol.bbox);
-    // A neighboring line or glyph can look like a ㅎ cap. Keep a recognized
-    // ㅇ intact; only repair the safer ㅎ -> ㅇ direction.
-    return isHieut && !shouldBeHieut ? swapped : char;
+    // Browser OCR does not expose a stable per-syllable confidence score.
+    // Keep its recognized ㅎ/ㅇ value rather than applying a blind swap: a
+    // table rule can look like a cap and previously changed "이원일" into
+    // "히훤힐". The desktop processor performs the confidence-gated visual
+    // second check when a low-confidence ㅇ needs rescuing.
+    void swapped;
+    void isHieut;
+    void shouldBeHieut;
+    return char;
   });
   return correctedChars.join("").trim();
 }
