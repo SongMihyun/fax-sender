@@ -8,7 +8,9 @@ pdfjs.GlobalWorkerOptions.workerSrc = pdfWorker;
 // Scanned (image-only) PDFs have no text layer, so pdfjs text extraction
 // returns nothing for them. OCR only kicks in as a fallback for that case,
 // so normal digital PDFs keep using the fast, exact text-layer path.
-const OCR_RENDER_SCALE = 3;
+// Names on these consent forms are small. Render one step higher than the
+// preview so final consonants such as ㅇ/ㅈ retain their individual strokes.
+const OCR_RENDER_SCALE = 4;
 const HIEUT_INDEX = 18; // ㅎ in the 19-way initial-consonant table
 const IEUNG_INDEX = 11; // ㅇ
 

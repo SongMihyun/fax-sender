@@ -164,7 +164,10 @@ function App() {
         }
 
         if (index === 2) {
-          extractedValues = await extractBatchFormValuesFromPdf(normalizedFile, selectedTemplate, extractedValues[0]);
+          // Keep drawing on the normalized template canvas, but OCR the
+          // original upload. Re-rasterizing a small printed Korean name can
+          // erase fine final-consonant strokes (for example 김영종 -> 기즈).
+          extractedValues = await extractBatchFormValuesFromPdf(nextFile, selectedTemplate, extractedValues[0]);
         }
 
         setStepStatus(index, "done");
