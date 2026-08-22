@@ -1,5 +1,7 @@
 #define AppName "FaxSender 자동처리"
-#define AppVersion "1.0.0"
+#ifndef AppVersion
+  #define AppVersion "1.0.0"
+#endif
 #define AppExeName "FaxSenderAutoProcessor.exe"
 
 [Setup]

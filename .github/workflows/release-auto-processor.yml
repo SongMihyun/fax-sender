@@ -1,0 +1,78 @@
+name: Release FaxSender Auto Processor
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to (re)release, e.g. v1.1.0"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+
+      - name: Resolve version from tag
+        id: version
+        shell: pwsh
+        run: |
+          $tag = "${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}"
+          $version = $tag -replace '^v', ''
+          "tag=$tag" >> $env:GITHUB_OUTPUT
+          "version=$version" >> $env:GITHUB_OUTPUT
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Create build virtualenv
+        shell: pwsh
+        run: |
+          python -m venv .venv
+          .venv\Scripts\python.exe -m pip install --upgrade pip
+          # kakao-pc-driver is an optional local sibling package (see backend/services/kakao_sender_adapter.py,
+          # which already handles it being missing) -- installed everywhere else via a path dependency that
+          # only exists on the maintainer's machine, so it's intentionally skipped here.
+          .venv\Scripts\python.exe -m pip install fastapi "uvicorn[standard]" pymupdf pillow pydantic pydantic-settings python-dotenv python-multipart opencv-python pytesseract pyinstaller
+
+      - name: Install Tesseract OCR and Inno Setup
+        run: |
+          choco install tesseract -y --no-progress
+          choco install innosetup -y --no-progress
+
+      - name: Bundle Korean OCR language data
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path tools\tessdata | Out-Null
+          Copy-Item "C:\Program Files\Tesseract-OCR\tessdata\eng.traineddata" tools\tessdata\
+          Copy-Item "C:\Program Files\Tesseract-OCR\tessdata\osd.traineddata" tools\tessdata\
+          Invoke-WebRequest -Uri "https://github.com/tesseract-ocr/tessdata_best/raw/main/kor.traineddata" -OutFile "tools\tessdata\kor.traineddata"
+
+      - name: Build application (PyInstaller)
+        shell: pwsh
+        run: .\scripts\build_auto_processor.ps1 -Python ".venv\Scripts\python.exe"
+
+      - name: Build installer (Inno Setup)
+        shell: pwsh
+        run: |
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "installer\FaxSenderAutoProcessor.iss" "/DAppVersion=${{ steps.version.outputs.version }}"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: FaxSender 자동처리 ${{ steps.version.outputs.tag }}
+          body: |
+            Windows 설치 파일입니다. 내장 한국어 OCR, 폴더 감시, 작업표시줄 최소화 및 폴더 정리 기능을 포함합니다.
+          files: release/FaxSenderAutoProcessor-Setup.exe
