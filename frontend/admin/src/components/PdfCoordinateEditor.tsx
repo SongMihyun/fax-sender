@@ -4,12 +4,12 @@ import { useMemo, useRef, useState } from "react";
 import type { DocumentMetadata, JsonObject } from "../api/client";
 import { getDocumentPageImageUrl } from "../api/client";
 
-type FieldType = "check" | "date" | "signature" | "name" | "extract_customer_name" | "extract_manager_name" | "extract_manager_code";
+type FieldType = "check" | "date" | "signature" | "name" | "extract_customer_name" | "extract_manager_name" | "extract_manager_code" | "extract_issue_number";
 
 type OverlayPosition = {
   id: string;
   type: FieldType;
-  field_key?: "customer_name" | "manager_name" | "manager_code";
+  field_key?: "customer_name" | "manager_name" | "manager_code" | "issue_number";
   page: number;
   x: number;
   y: number;
@@ -40,12 +40,14 @@ const toolLabels: Record<FieldType, string> = {
   extract_customer_name: "고객명 추출",
   extract_manager_name: "팀장명 추출",
   extract_manager_code: "코드 추출",
+  extract_issue_number: "발행번호 추출",
 };
 
 const extractFieldKeys = {
   extract_customer_name: "customer_name",
   extract_manager_name: "manager_name",
   extract_manager_code: "manager_code",
+  extract_issue_number: "issue_number",
 } as const;
 
 function normalizeType(position: StoredOverlayPosition): OverlayPosition {
@@ -54,6 +56,7 @@ function normalizeType(position: StoredOverlayPosition): OverlayPosition {
     if (fieldKey === "customer_name") return { ...position, type: "extract_customer_name" };
     if (fieldKey === "manager_name") return { ...position, type: "extract_manager_name" };
     if (fieldKey === "manager_code") return { ...position, type: "extract_manager_code" };
+    if (fieldKey === "issue_number") return { ...position, type: "extract_issue_number" };
   }
   return position as OverlayPosition;
 }

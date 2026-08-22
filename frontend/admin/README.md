@@ -8,7 +8,7 @@ React, TypeScript, Vite, Tailwind 기반 관리자 MVP입니다.
 
 ```bash
 cd D:\M-project\fax-sender
-poetry run uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000
+poetry run uvicorn backend.main:app --reload --host 127.0.0.1 --port 8791
 ```
 
 프론트엔드:
@@ -22,13 +22,13 @@ npm run dev
 브라우저:
 
 ```text
-http://127.0.0.1:5173
+http://127.0.0.1:5791
 ```
 
 API 주소를 바꾸려면 `.env` 또는 실행 환경에 아래 값을 지정합니다.
 
 ```text
-VITE_API_BASE_URL=http://127.0.0.1:8000
+VITE_API_BASE_URL=http://127.0.0.1:8791
 ```
 
 ## 연결 API

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, File, Form, UploadFile
 
 from backend.models.schemas import ProcessExtractResponse, ProcessMergeRequest, ProcessPdfResponse, ProcessRunRequest, ProcessStatusResponse, ProcessUploadResponse, TemplateMergeRequest
-from backend.services.document_service import save_process_upload
+from backend.services.document_service import cleanup_process_document, save_process_upload
 from backend.services.process_service import get_process_status, retry_process, run_full_process, upload_process_document
 from backend.services.template_merge_service import extract_template_batch_fields_detail, merge_template_pdf
 
@@ -52,6 +52,8 @@ def merge_process_pdf(payload: ProcessMergeRequest):
         TemplateMergeRequest(form_data=payload.form_data),
         document_id_override=payload.document_id,
     )
+    if result.success:
+        cleanup_process_document(payload.document_id)
     return ProcessPdfResponse(
         success=result.success,
         process_id=None,
@@ -74,6 +76,8 @@ def merge_process_pdf(payload: ProcessMergeRequest):
 async def process_pdf(template_id: int = Form(...), file: UploadFile = File(...)):
     document = await save_process_upload(file)
     result = merge_template_pdf(template_id, TemplateMergeRequest(), document_id_override=document.id)
+    if result.success:
+        cleanup_process_document(document.id)
     batch_items = result.applied_style_profile.get("batch_items", [])
     first_batch = batch_items[0] if batch_items else {}
     return ProcessPdfResponse(

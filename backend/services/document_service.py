@@ -566,6 +566,15 @@ def sanitize_person_name(text: str) -> str:
     return re.sub(r"\s+", " ", re.sub(r"[^가-힣a-zA-Z\s]", " ", text)).strip()
 
 
+def sanitize_issue_number(text: str) -> str:
+    # Printed as a plain "발행번호: 100394244" label/value pair -- no
+    # parenthesised form like manager_code, so just take the longest digit run.
+    digit_groups = re.findall(r"\d{4,}", text)
+    if digit_groups:
+        return max(digit_groups, key=len)
+    return re.sub(r"[^0-9]", "", text)
+
+
 def sanitize_extracted_field(field_key: str, raw_text: str) -> tuple[str, str | None]:
     if field_key in {"manager_name", "manager_code"}:
         source_text, warning = extract_after_second_slash(raw_text)
@@ -574,6 +583,8 @@ def sanitize_extracted_field(field_key: str, raw_text: str) -> tuple[str, str | 
         return sanitize_manager_code(source_text), warning
     if field_key == "customer_name":
         return sanitize_person_name(raw_text), None
+    if field_key == "issue_number":
+        return sanitize_issue_number(raw_text), None
     return raw_text.strip(), None
 
 

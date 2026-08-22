@@ -170,7 +170,7 @@ export type SignatureAsset = {
   created_at: string | null;
 };
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8791";
 
 async function parseResponse<T>(response: Response): Promise<T> {
   const contentType = response.headers.get("content-type") ?? "";
@@ -435,6 +435,20 @@ export async function listPublicTemplates(): Promise<PublicTemplate[]> {
   return parseResponse<PublicTemplate[]>(await fetch(`${API_BASE_URL}/api/templates/public`));
 }
 
+export async function getActiveTemplate(): Promise<PdfTemplate> {
+  return parseResponse<PdfTemplate>(await fetch(`${API_BASE_URL}/api/templates/active`));
+}
+
+export async function setActiveTemplate(templateId: number): Promise<PdfTemplate> {
+  return parseResponse<PdfTemplate>(
+    await fetch(`${API_BASE_URL}/api/templates/active`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ template_id: templateId }),
+    }),
+  );
+}
+
 export async function createTemplate(payload: TemplatePayload): Promise<PdfTemplate> {
   return parseResponse<PdfTemplate>(
     await fetch(`${API_BASE_URL}/api/templates`, {
@@ -518,8 +532,28 @@ export function defaultRenderStyle(): JsonObject {
       scale: [0.95, 1.05],
       opacity: [0.85, 1.0],
     },
+    filename_pattern: ["manager_code", "manager_name", "customer_name", "date_time"],
   };
 }
+
+export const EXTRACT_FIELD_KEYS = ["customer_name", "manager_name", "manager_code", "issue_number"] as const;
+export type ExtractFieldKey = (typeof EXTRACT_FIELD_KEYS)[number];
+export const EXTRACT_FIELD_LABELS: Record<ExtractFieldKey, string> = {
+  customer_name: "고객명",
+  manager_name: "팀장명",
+  manager_code: "코드",
+  issue_number: "발행번호",
+};
+
+export const FILENAME_TOKENS = ["manager_code", "issue_number", "manager_name", "customer_name", "date_time"] as const;
+export type FilenameToken = (typeof FILENAME_TOKENS)[number];
+export const FILENAME_TOKEN_LABELS: Record<FilenameToken, string> = {
+  manager_code: "코드",
+  issue_number: "발행번호",
+  manager_name: "팀장명",
+  customer_name: "고객명",
+  date_time: "날짜시간",
+};
 
 export async function deleteTemplate(templateId: number): Promise<{ status: string }> {
   return parseResponse<{ status: string }>(

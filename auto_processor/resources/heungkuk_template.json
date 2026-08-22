@@ -1,43 +1,210 @@
 {
   "name": "흥국생명_고객동의",
-  "description": "흥국생명 고객동의서 자동처리용 템플릿",
+  "description": "흥국생명_고객동의_1장",
   "form_data": {},
   "render_style": {
     "randomize": true,
     "pdf_level_style": true,
     "page_group_size": 3,
-    "signature_generation_modes": ["jamo_composed_signature", "full_korean_name", "neat_korean_name"],
-    "check_stroke_profiles": ["normal", "dark", "light"],
+    "signature_generation_modes": [
+      "jamo_composed_signature",
+      "full_korean_name",
+      "neat_korean_name"
+    ],
+    "check_stroke_profiles": [
+      "normal",
+      "dark",
+      "light"
+    ],
     "keep_style_consistency_per_pdf": true,
     "fax_effect": true,
     "fax_effect_config": {
       "dpi": 200,
-      "rotation": [-0.2, 0.2],
+      "rotation": [
+        -0.2,
+        0.2
+      ],
       "contrast": 1.42,
       "brightness": 0.96,
       "noise": 3,
       "blur": 0,
       "jpeg_quality": 92
-    }
+    },
+    "filename_pattern": [
+      "issue_number",
+      "manager_name",
+      "customer_name",
+      "date_time"
+    ]
   },
   "overlay_config": {
     "pages": {
       "1": {
         "positions": [
-          {"id":"p1_customer_name_source_1","type":"extract_text","field_key":"customer_name","page":1,"x":193.33,"y":82,"width":48.66,"height":16.66,"unit":"pdf_point"},
-          {"id":"p1_manager_name_source_1","type":"extract_text","field_key":"manager_name","page":1,"x":111.33,"y":729.33,"width":37.33,"height":17.33,"unit":"pdf_point"},
-          {"id":"p1_manager_code_source_1","type":"extract_text","field_key":"manager_code","page":1,"x":214,"y":729.33,"width":64.67,"height":16,"unit":"pdf_point"},
-          {"id":"p1_check_1","type":"check","page":1,"x":544,"y":138.67,"width":22,"height":22,"unit":"pdf_point","source_type":"check_asset"},
-          {"id":"p1_check_2","type":"check","page":1,"x":542,"y":166.67,"width":24.67,"height":19.33,"unit":"pdf_point","source_type":"check_asset"},
-          {"id":"p1_check_3","type":"check","page":1,"x":546.67,"y":198.67,"width":21.33,"height":22.67,"unit":"pdf_point","source_type":"check_asset"},
-          {"id":"p1_check_4","type":"check","page":1,"x":541.33,"y":332.67,"width":28,"height":23.33,"unit":"pdf_point","source_type":"check_asset"},
-          {"id":"p1_check_5","type":"check","page":1,"x":542,"y":362.67,"width":22.67,"height":20.67,"unit":"pdf_point","source_type":"check_asset"},
-          {"id":"p1_check_6","type":"check","page":1,"x":544.67,"y":395.33,"width":20,"height":20,"unit":"pdf_point","source_type":"check_asset"},
-          {"id":"p1_check_7","type":"check","page":1,"x":544,"y":540.67,"width":20,"height":23.34,"unit":"pdf_point","source_type":"check_asset"},
-          {"id":"p1_check_8","type":"check","page":1,"x":545.33,"y":570.67,"width":20.67,"height":20.66,"unit":"pdf_point","source_type":"check_asset"},
-          {"id":"p1_check_9","type":"check","page":1,"x":545.99,"y":613.34,"width":18.66,"height":18.67,"unit":"pdf_point","source_type":"check_asset"},
-          {"id":"p1_name_1","type":"name","field_key":"customer_name","page":1,"x":466,"y":665.33,"width":74.67,"height":28.66,"unit":"pdf_point"},
-          {"id":"p1_signature_1","type":"signature","field_key":"customer_name","page":1,"x":543.34,"y":664.67,"width":60.67,"height":33.33,"unit":"pdf_point","source_type":"generated_signature"}
+          {
+            "id": "p1_customer_name_source_1",
+            "type": "extract_text",
+            "field_key": "customer_name",
+            "page": 1,
+            "x": 193.33,
+            "y": 82,
+            "width": 48.66,
+            "height": 16.66,
+            "unit": "pdf_point"
+          },
+          {
+            "id": "p1_manager_name_source_1",
+            "type": "extract_text",
+            "field_key": "manager_name",
+            "page": 1,
+            "x": 111.33,
+            "y": 729.33,
+            "width": 37.33,
+            "height": 17.33,
+            "unit": "pdf_point"
+          },
+          {
+            "id": "p1_manager_code_source_1",
+            "type": "extract_text",
+            "field_key": "manager_code",
+            "page": 1,
+            "x": 214,
+            "y": 729.33,
+            "width": 64.67,
+            "height": 16,
+            "unit": "pdf_point"
+          },
+          {
+            "id": "p1_check_1",
+            "type": "check",
+            "page": 1,
+            "x": 544,
+            "y": 138.67,
+            "width": 22,
+            "height": 22,
+            "unit": "pdf_point",
+            "source_type": "check_asset"
+          },
+          {
+            "id": "p1_check_2",
+            "type": "check",
+            "page": 1,
+            "x": 542,
+            "y": 166.67,
+            "width": 24.67,
+            "height": 19.33,
+            "unit": "pdf_point",
+            "source_type": "check_asset"
+          },
+          {
+            "id": "p1_check_3",
+            "type": "check",
+            "page": 1,
+            "x": 546.67,
+            "y": 198.67,
+            "width": 21.33,
+            "height": 22.67,
+            "unit": "pdf_point",
+            "source_type": "check_asset"
+          },
+          {
+            "id": "p1_check_4",
+            "type": "check",
+            "page": 1,
+            "x": 541.33,
+            "y": 332.67,
+            "width": 28,
+            "height": 23.33,
+            "unit": "pdf_point",
+            "source_type": "check_asset"
+          },
+          {
+            "id": "p1_check_5",
+            "type": "check",
+            "page": 1,
+            "x": 541.33,
+            "y": 358,
+            "width": 28.67,
+            "height": 24.67,
+            "unit": "pdf_point",
+            "source_type": "check_asset"
+          },
+          {
+            "id": "p1_check_6",
+            "type": "check",
+            "page": 1,
+            "x": 542,
+            "y": 390,
+            "width": 28.67,
+            "height": 32,
+            "unit": "pdf_point",
+            "source_type": "check_asset"
+          },
+          {
+            "id": "p1_check_7",
+            "type": "check",
+            "page": 1,
+            "x": 540.67,
+            "y": 540.67,
+            "width": 26,
+            "height": 26.67,
+            "unit": "pdf_point",
+            "source_type": "check_asset"
+          },
+          {
+            "id": "p1_check_8",
+            "type": "check",
+            "page": 1,
+            "x": 539.33,
+            "y": 570.67,
+            "width": 32,
+            "height": 23.33,
+            "unit": "pdf_point",
+            "source_type": "check_asset"
+          },
+          {
+            "id": "p1_check_9",
+            "type": "check",
+            "page": 1,
+            "x": 541.33,
+            "y": 606,
+            "width": 29.33,
+            "height": 32.67,
+            "unit": "pdf_point",
+            "source_type": "check_asset"
+          },
+          {
+            "id": "p1_name_1",
+            "type": "name",
+            "page": 1,
+            "x": 466,
+            "y": 665.33,
+            "width": 74.67,
+            "height": 28.66,
+            "unit": "pdf_point"
+          },
+          {
+            "id": "p1_signature_1",
+            "type": "signature",
+            "page": 1,
+            "x": 543.34,
+            "y": 664.67,
+            "width": 60.67,
+            "height": 33.33,
+            "unit": "pdf_point",
+            "source_type": "generated_signature"
+          },
+          {
+            "id": "p1_issue_number_source_1",
+            "type": "extract_text",
+            "field_key": "issue_number",
+            "page": 1,
+            "x": 427,
+            "y": 82,
+            "width": 60,
+            "height": 16.66,
+            "unit": "pdf_point"
+          }
         ]
       }
     }

@@ -7,6 +7,7 @@ from fastapi import HTTPException
 from backend.core.settings import settings
 from backend.database.db import get_conn, now_iso
 from backend.models.schemas import TemplateCreate, TemplateOut, TemplatePublicOut, TemplateUpdate
+from backend.services.config_service import read_active_template_id, save_active_template_id
 
 
 def _default_overlay_config() -> dict[str, Any]:
@@ -111,6 +112,42 @@ def get_template(template_id: int) -> TemplateOut:
     return _row_to_template(row)
 
 
+def get_active_template() -> TemplateOut:
+    active_template_id = read_active_template_id()
+    if active_template_id is not None:
+        try:
+            active = get_template(active_template_id)
+            if active.document_id is not None:
+                return active
+        except HTTPException as error:
+            if error.status_code != 404:
+                raise
+
+    public_templates = list_public_templates()
+    if not public_templates:
+        raise HTTPException(status_code=404, detail="사용 가능한 템플릿이 없습니다.")
+    fallback = get_template(public_templates[0].id)
+    save_active_template_id(fallback.id)
+    return fallback
+
+
+def set_active_template(template_id: int) -> TemplateOut:
+    template = get_template(template_id)
+    if template.document_id is None:
+        raise HTTPException(status_code=400, detail="기준 PDF가 연결된 템플릿만 사용할 수 있습니다.")
+    positions = [
+        position
+        for page in template.overlay_config.get("pages", {}).values()
+        if isinstance(page, dict)
+        for position in page.get("positions", [])
+        if isinstance(position, dict)
+    ]
+    if not positions:
+        raise HTTPException(status_code=400, detail="처리 좌표가 등록된 템플릿만 사용할 수 있습니다.")
+    save_active_template_id(template.id)
+    return template
+
+
 def create_template(payload: TemplateCreate) -> TemplateOut:
     name = payload.name.strip()
     if not name:
@@ -187,6 +224,8 @@ def delete_template(template_id: int) -> dict[str, str]:
     get_template(template_id)
     with get_conn() as conn:
         conn.execute("DELETE FROM pdf_templates WHERE id = ?", (template_id,))
+    if read_active_template_id() == template_id:
+        save_active_template_id(None)
     return {"status": "deleted"}
 
 

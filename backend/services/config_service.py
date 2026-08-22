@@ -40,3 +40,12 @@ def read_form_data() -> dict[str, Any]:
 
 def save_form_data(data: dict[str, Any]) -> None:
     _write_json(settings.form_data_path, data)
+
+
+def read_active_template_id() -> int | None:
+    value = _read_json(settings.active_template_path, {}).get("template_id")
+    return value if isinstance(value, int) and value > 0 else None
+
+
+def save_active_template_id(template_id: int | None) -> None:
+    _write_json(settings.active_template_path, {"template_id": template_id})

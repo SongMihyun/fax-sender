@@ -1,8 +1,8 @@
 from fastapi import APIRouter
 
-from backend.models.schemas import ExtractFieldsResponse, TemplateCreate, TemplateMergeRequest, TemplateMergeResponse, TemplateOut, TemplatePublicOut, TemplateUpdate
+from backend.models.schemas import ActiveTemplateUpdate, ExtractFieldsResponse, TemplateCreate, TemplateMergeRequest, TemplateMergeResponse, TemplateOut, TemplatePublicOut, TemplateUpdate
 from backend.services.template_merge_service import extract_template_fields_detail, merge_template_pdf
-from backend.services.template_service import create_template, delete_template, get_template, list_public_templates, list_templates, update_template
+from backend.services.template_service import create_template, delete_template, get_active_template, get_template, list_public_templates, list_templates, set_active_template, update_template
 
 router = APIRouter()
 
@@ -15,6 +15,16 @@ def templates():
 @router.get("/public", response_model=list[TemplatePublicOut])
 def public_templates():
     return list_public_templates()
+
+
+@router.get("/active", response_model=TemplateOut)
+def active_template():
+    return get_active_template()
+
+
+@router.put("/active", response_model=TemplateOut)
+def put_active_template(payload: ActiveTemplateUpdate):
+    return set_active_template(payload.template_id)
 
 
 @router.post("", response_model=TemplateOut)

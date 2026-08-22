@@ -32,6 +32,8 @@ import {
   type ProcessPdfResponse,
   type PublicTemplate,
   type SignatureAsset,
+  EXTRACT_FIELD_KEYS,
+  EXTRACT_FIELD_LABELS,
   createTemplate,
   createJamoAsset,
   defaultRenderStyle,
@@ -42,6 +44,7 @@ import {
   deleteTemplate,
   extractProcessPdf,
   extractTemplateFields,
+  getActiveTemplate,
   getDocumentMetadata,
   getFormData,
   getHealth,
@@ -57,6 +60,7 @@ import {
   previewJamoSignature,
   processPdf,
   saveFormData,
+  setActiveTemplate,
   updateJamoAsset,
   updateSignatureAsset,
   updateTemplate,
@@ -67,6 +71,7 @@ import {
 } from "./api/client";
 import { CheckAssetManager } from "./components/CheckAssetManager";
 import { DocumentList } from "./components/DocumentList";
+import { FilenamePatternEditor } from "./components/FilenamePatternEditor";
 import { JamoAssetManager } from "./components/JamoAssetManager";
 import { JsonEditor } from "./components/JsonEditor";
 import { PdfCoordinateEditor } from "./components/PdfCoordinateEditor";
@@ -83,7 +88,7 @@ type Notice = {
 };
 
 type MainPage = "documents" | "templates" | "checks" | "jamo" | "test" | "signatures" | "fax" | "logs";
-type TemplateTab = "info" | "coordinates" | "style" | "test";
+type TemplateTab = "info" | "coordinates" | "style" | "active" | "test";
 
 const menuItems: Array<{ id: MainPage; label: string; description: string; icon: typeof FileText; disabled?: boolean }> = [
   { id: "documents", label: "문서 관리", description: "원본 PDF CRUD", icon: FileText },
@@ -100,6 +105,7 @@ const templateTabs: Array<{ id: TemplateTab; label: string }> = [
   { id: "info", label: "기본 정보" },
   { id: "coordinates", label: "좌표 설정" },
   { id: "style", label: "스타일 설정" },
+  { id: "active", label: "사용 템플릿 선택" },
   { id: "test", label: "테스트" },
 ];
 
@@ -109,6 +115,14 @@ function parseJsonObject(value: string): JsonObject {
     throw new Error("최상위 JSON은 객체여야 합니다.");
   }
   return parsed as JsonObject;
+}
+
+function extractFieldsFromFormData(formData: JsonObject | undefined | null): Record<string, string> {
+  const result: Record<string, string> = {};
+  for (const key of EXTRACT_FIELD_KEYS) {
+    result[key] = String(formData?.[key] ?? "");
+  }
+  return result;
 }
 
 function makeTemplateName(document: DocumentOut | null, nextIndex: number): string {
@@ -801,6 +815,8 @@ function AdminApp() {
   const [templates, setTemplates] = useState<PdfTemplate[]>([]);
   const [selectedDocument, setSelectedDocument] = useState<DocumentOut | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<PdfTemplate | null>(null);
+  const [activeTemplateId, setActiveTemplateId] = useState<number | null>(null);
+  const [activeTemplateDraftId, setActiveTemplateDraftId] = useState<number | null>(null);
   const [templateName, setTemplateName] = useState("");
   const [templateDescription, setTemplateDescription] = useState("");
   const [templateDocumentId, setTemplateDocumentId] = useState<number | null>(null);
@@ -839,11 +855,7 @@ function AdminApp() {
     setTemplateDocumentId(template?.document_id ?? null);
     setOverlayText(prettyJson(template?.overlay_config ?? { pages: {} }));
     setFormDataText(prettyJson(template?.form_data ?? {}));
-    setExtractedFields({
-      customer_name: String(template?.form_data?.customer_name ?? ""),
-      manager_name: String(template?.form_data?.manager_name ?? ""),
-      manager_code: String(template?.form_data?.manager_code ?? ""),
-    });
+    setExtractedFields(extractFieldsFromFormData(template?.form_data));
     setRenderStyleText(prettyJson(template?.render_style ?? defaultRenderStyle()));
     if (template?.document_id) {
       const matchedDocument = documents.find((document) => document.id === template.document_id);
@@ -892,8 +904,10 @@ function AdminApp() {
 
   const refreshTemplates = useCallback(async () => {
     await runTask("templates", async () => {
-      const nextTemplates = await listTemplates();
+      const [nextTemplates, activeTemplate] = await Promise.all([listTemplates(), getActiveTemplate().catch(() => null)]);
       setTemplates(nextTemplates);
+      setActiveTemplateId(activeTemplate?.id ?? null);
+      setActiveTemplateDraftId(activeTemplate?.id ?? null);
       setSelectedTemplate((current) => {
         const nextSelected = current ? nextTemplates.find((template) => template.id === current.id) ?? null : nextTemplates[0] ?? null;
         setTemplateName(nextSelected?.name ?? "");
@@ -901,11 +915,7 @@ function AdminApp() {
         setTemplateDocumentId(nextSelected?.document_id ?? null);
         setOverlayText(prettyJson(nextSelected?.overlay_config ?? { pages: {} }));
         setFormDataText(prettyJson(nextSelected?.form_data ?? {}));
-        setExtractedFields({
-          customer_name: String(nextSelected?.form_data?.customer_name ?? ""),
-          manager_name: String(nextSelected?.form_data?.manager_name ?? ""),
-          manager_code: String(nextSelected?.form_data?.manager_code ?? ""),
-        });
+        setExtractedFields(extractFieldsFromFormData(nextSelected?.form_data));
         setRenderStyleText(prettyJson(nextSelected?.render_style ?? defaultRenderStyle()));
         return nextSelected;
       });
@@ -978,6 +988,19 @@ function AdminApp() {
       setActivePage("templates");
       setTemplateTab("info");
       setNotice({ type: "success", message: "새 공통 PDF 템플릿을 만들었습니다." });
+    });
+  }
+
+  async function handleSetActiveTemplate() {
+    if (!activeTemplateDraftId) {
+      setNotice({ type: "error", message: "사용할 템플릿을 선택하세요." });
+      return;
+    }
+    await runTask("active-template", async () => {
+      const activeTemplate = await setActiveTemplate(activeTemplateDraftId);
+      setActiveTemplateId(activeTemplate.id);
+      setActiveTemplateDraftId(activeTemplate.id);
+      setNotice({ type: "success", message: `${activeTemplate.name} 템플릿을 FaxSender에 적용했습니다.` });
     });
   }
 
@@ -1176,11 +1199,7 @@ function AdminApp() {
     }
     await runTask("extract-fields", async () => {
       const result = await extractTemplateFields(selectedTemplate.id);
-      const nextFields = {
-        customer_name: result.fields.customer_name ?? "",
-        manager_name: result.fields.manager_name ?? "",
-        manager_code: result.fields.manager_code ?? "",
-      };
+      const nextFields = extractFieldsFromFormData(result.fields);
       setExtractedFields(nextFields);
       setRawExtractedFields(result.raw_fields ?? {});
       setExtractWarnings(result.warnings ?? {});
@@ -1191,7 +1210,29 @@ function AdminApp() {
     });
   }
 
-  function updateExtractedField(key: "customer_name" | "manager_name" | "manager_code", value: string) {
+  function currentFilenamePattern(): string[] {
+    try {
+      const pattern = parseJsonObject(renderStyleText).filename_pattern;
+      if (Array.isArray(pattern) && pattern.every((item) => typeof item === "string")) {
+        return pattern as string[];
+      }
+    } catch {
+      // JSON editor may be mid-edit; fall back to the default below.
+    }
+    return (defaultRenderStyle().filename_pattern as string[]) ?? [];
+  }
+
+  function updateFilenamePattern(nextPattern: string[]) {
+    let base: JsonObject;
+    try {
+      base = parseJsonObject(renderStyleText);
+    } catch {
+      base = defaultRenderStyle();
+    }
+    setRenderStyleText(prettyJson({ ...base, filename_pattern: nextPattern }));
+  }
+
+  function updateExtractedField(key: string, value: string) {
     setExtractedFields((current) => ({ ...current, [key]: value }));
     try {
       const currentFormData = parseJsonObject(formDataText);
@@ -1362,14 +1403,59 @@ function AdminApp() {
         ) : null}
 
         {templateTab === "style" ? (
-          <JsonEditor
-            title="render_style"
-            value={renderStyleText}
-            onChange={setRenderStyleText}
-            onReload={refreshTemplates}
-            onSave={handleSaveTemplate}
-            isBusy={isBusy}
-          />
+          <>
+            <FilenamePatternEditor pattern={currentFilenamePattern()} disabled={isBusy} onChange={updateFilenamePattern} />
+            <JsonEditor
+              title="render_style"
+              value={renderStyleText}
+              onChange={setRenderStyleText}
+              onReload={refreshTemplates}
+              onSave={handleSaveTemplate}
+              isBusy={isBusy}
+            />
+          </>
+        ) : null}
+
+        {templateTab === "active" ? (
+          <section className="panel active-template-panel">
+            <div className="panel-header">
+              <div>
+                <h2>FaxSender 사용 템플릿</h2>
+                <p>사용자 화면에서 PDF를 처리할 템플릿 하나를 선택합니다.</p>
+              </div>
+            </div>
+            <div className="active-template-list" role="radiogroup" aria-label="FaxSender 사용 템플릿">
+              {templates.map((template) => {
+                const isActive = template.id === activeTemplateId;
+                const isSelected = template.id === activeTemplateDraftId;
+                return (
+                  <button
+                    className={`active-template-option ${isSelected ? "selected" : ""}`}
+                    type="button"
+                    role="radio"
+                    aria-checked={isSelected}
+                    key={template.id}
+                    onClick={() => setActiveTemplateDraftId(template.id)}
+                    disabled={isBusy || template.document_id === null}
+                  >
+                    <span className="active-template-radio" aria-hidden="true">{isSelected ? "●" : "○"}</span>
+                    <span>
+                      <strong>#{template.id} {template.name}</strong>
+                      <small>{template.description || template.document_name || "설명 없음"}</small>
+                    </span>
+                    {isActive ? <em>현재 사용 중</em> : template.document_id === null ? <em>기준 PDF 없음</em> : null}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="active-template-actions">
+              <p>저장 후 FaxSender 화면을 새로고침하면 적용됩니다.</p>
+              <button className="primary-button" type="button" onClick={() => void handleSetActiveTemplate()} disabled={isBusy || !activeTemplateDraftId || activeTemplateDraftId === activeTemplateId}>
+                <Save size={16} aria-hidden="true" />
+                선택 템플릿 적용
+              </button>
+            </div>
+          </section>
         ) : null}
 
         {templateTab === "test" ? (
@@ -1498,7 +1584,7 @@ function AdminApp() {
         <div className="panel-header">
           <div>
             <h2>추출 결과 확인</h2>
-            <p>고객명, 팀장명, 코드를 추출하고 운영자가 수정할 수 있습니다.</p>
+            <p>{EXTRACT_FIELD_KEYS.map((key) => EXTRACT_FIELD_LABELS[key]).join(", ")}을(를) 추출하고 운영자가 수정할 수 있습니다.</p>
           </div>
           <button className="secondary-button compact" type="button" onClick={handleExtractTemplateFields} disabled={isBusy || !selectedTemplate}>
             <RefreshCw size={16} aria-hidden="true" />
@@ -1506,23 +1592,14 @@ function AdminApp() {
           </button>
         </div>
         <div className="form-grid">
-          <label>
-            <span>고객명</span>
-            <small>원본: {rawExtractedFields.customer_name || "-"}</small>
-            <input value={extractedFields.customer_name ?? ""} onChange={(event) => updateExtractedField("customer_name", event.target.value)} />
-          </label>
-          <label>
-            <span>팀장명</span>
-            <small>원본: {rawExtractedFields.manager_name || "-"}</small>
-            <input value={extractedFields.manager_name ?? ""} onChange={(event) => updateExtractedField("manager_name", event.target.value)} />
-            {extractWarnings.manager_name ? <small className="warning-text">{extractWarnings.manager_name}</small> : null}
-          </label>
-          <label>
-            <span>코드</span>
-            <small>원본: {rawExtractedFields.manager_code || "-"}</small>
-            <input value={extractedFields.manager_code ?? ""} onChange={(event) => updateExtractedField("manager_code", event.target.value)} />
-            {extractWarnings.manager_code ? <small className="warning-text">{extractWarnings.manager_code}</small> : null}
-          </label>
+          {EXTRACT_FIELD_KEYS.map((key) => (
+            <label key={key}>
+              <span>{EXTRACT_FIELD_LABELS[key]}</span>
+              <small>원본: {rawExtractedFields[key] || "-"}</small>
+              <input value={extractedFields[key] ?? ""} onChange={(event) => updateExtractedField(key, event.target.value)} />
+              {extractWarnings[key] ? <small className="warning-text">{extractWarnings[key]}</small> : null}
+            </label>
+          ))}
         </div>
       </section>
     );
@@ -1670,7 +1747,10 @@ export default function App() {
     }
   }, [path]);
 
-  if (path.startsWith("/admin")) return <AdminGate />;
-  if (path.startsWith("/fax")) return <FaxOneClickPage />;
+  // Base prefix varies by deployment (bare /admin in dev, /faxsender/admin/ or
+  // /fax-sender/admin/ once nested under the static site build) -- match the
+  // segment itself instead of a specific prefix so routing survives that.
+  if (path.includes("/admin")) return <AdminGate />;
+  if (path.includes("/fax")) return <FaxOneClickPage />;
   return <ProcessPage />;
 }

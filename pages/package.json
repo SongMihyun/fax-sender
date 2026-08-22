@@ -4,10 +4,13 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "admin:build": "npm.cmd --prefix ../frontend/admin run build",
-    "predev": "npm.cmd run admin:build",
+    "admin:build": "npm --prefix ../frontend/admin run build",
+    "admin:build:pages": "npm --prefix ../frontend/admin run build:pages",
+    "predev": "npm run admin:build",
     "dev": "vite --host 127.0.0.1 --port 5791",
+    "prebuild": "npm run admin:build",
     "build": "tsc -b && vite build",
+    "prebuild:pages": "npm run admin:build:pages",
     "build:pages": "tsc -b && vite build --mode pages",
     "preview": "vite preview --host 127.0.0.1 --port 4891"
   },

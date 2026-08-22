@@ -27,7 +27,7 @@ storage = 런타임 데이터 저장소
 ```bash
 cd D:\M-project\fax-sender
 poetry install
-poetry run uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000
+poetry run uvicorn backend.main:app --reload --host 127.0.0.1 --port 8791
 ```
 
 또는:
@@ -39,8 +39,8 @@ poetry run python main.py
 ## 확인 URL
 
 ```text
-http://127.0.0.1:8000/docs
-http://127.0.0.1:8000/api/health
+http://127.0.0.1:8791/docs
+http://127.0.0.1:8791/api/health
 ```
 
 ## 주요 변경점
@@ -76,8 +76,8 @@ npm run dev
 ```
 
 ```text
-http://127.0.0.1:5173/process
-http://127.0.0.1:5173/admin
+http://127.0.0.1:5791/faxsender/
+http://127.0.0.1:5791/admin/
 ```
 
 기본 진입 화면은 `/process` 사용자단 PDF 자동 처리 화면입니다.
@@ -90,3 +90,20 @@ http://127.0.0.1:5173/admin
 체크 에셋 관리는 사용자가 업로드한 실제 체크 사진에서 선만 추출해 투명 PNG로 저장하며, 생성형 이미지로 새 체크를 만들지 않습니다.
 손글씨 자모 관리는 `/admin`의 별도 메뉴에서 원본 사진을 업로드한 뒤 초성/중성/종성별 드래그 영역을 투명 PNG로 저장합니다.
 `jamo_composed_signature` 서명 모드는 고객명을 한글 자모로 분해하고 저장된 자모 PNG를 랜덤 조합해 서명 이미지를 생성합니다.
+
+## Kakao self notification
+
+FaxSender can send a KakaoTalk PC self-chat notification after final PDF generation when `send_kakao=true`.
+
+```toml
+kakao-pc-driver = { path = "../KakaoCampaignSender/packages/kakao_pc_driver", develop = true }
+```
+
+Optional `.env` values:
+
+```env
+KAKAO_MY_NAME=Your Name
+KAKAO_SPEED_MODE=normal
+```
+
+KakaoTalk PC must be running and signed in on Windows.

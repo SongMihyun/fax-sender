@@ -2,7 +2,7 @@
 """개발용 통합 실행 진입점.
 
 운영/개발 표준 실행:
-    poetry run uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000
+    poetry run uvicorn backend.main:app --reload --host 127.0.0.1 --port 8791
 
 간편 실행:
     poetry run python main.py

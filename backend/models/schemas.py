@@ -319,6 +319,7 @@ class TemplateCreate(BaseModel):
                 "scale": [0.95, 1.05],
                 "opacity": [0.85, 1.0],
             },
+            "filename_pattern": ["manager_code", "manager_name", "customer_name", "date_time"],
         }
     )
 
@@ -330,6 +331,10 @@ class TemplateUpdate(BaseModel):
     overlay_config: dict[str, Any] | None = None
     form_data: dict[str, Any] | None = None
     render_style: dict[str, Any] | None = None
+
+
+class ActiveTemplateUpdate(BaseModel):
+    template_id: int
 
 
 class TemplateOut(BaseModel):

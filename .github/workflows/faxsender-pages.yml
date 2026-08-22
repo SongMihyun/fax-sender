@@ -5,6 +5,7 @@ on:
     branches: ["main", "develop"]
     paths:
       - "pages/**"
+      - "frontend/admin/**"
       - ".github/workflows/faxsender-pages.yml"
   workflow_dispatch:
 
@@ -32,9 +33,15 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: pages/package-lock.json
+          cache-dependency-path: |
+            pages/package-lock.json
+            frontend/admin/package-lock.json
 
-      - name: Install dependencies
+      - name: Install pages dependencies
+        run: npm ci
+
+      - name: Install admin dependencies
+        working-directory: frontend/admin
         run: npm ci
 
       - name: Build

@@ -63,18 +63,30 @@ class FolderProcessor:
         return json.loads(template_path.read_text(encoding="utf-8"))
 
     def _ensure_heungkuk_template(self) -> None:
-        """Seed only the non-sensitive built-in template needed by the watcher."""
+        """Sync the non-sensitive built-in template from the bundled resource on every run.
+
+        This template has no per-machine customization, so the bundled JSON is the single
+        source of truth. Always overwriting it (instead of only seeding it once) means a
+        rebuilt/updated bundle reaches machines that already ran the app before, without
+        needing a manual DB reset -- a stale local copy previously caused checkbox/field
+        coordinates to silently drift out of sync with whatever was last calibrated.
+        """
+        payload = self._template_payload()
+        now = now_iso()
         with get_conn() as conn:
-            if conn.execute("SELECT 1 FROM pdf_templates WHERE id = ?", (self.template_id,)).fetchone():
-                return
-            payload = self._template_payload()
-            now = now_iso()
             conn.execute(
                 """
                 INSERT INTO pdf_templates(
                     id, name, description, document_id, overlay_config_json,
                     form_data_json, render_style_json, created_at, updated_at
                 ) VALUES (?, ?, ?, NULL, ?, ?, ?, ?, ?)
+                ON CONFLICT(id) DO UPDATE SET
+                    name = excluded.name,
+                    description = excluded.description,
+                    overlay_config_json = excluded.overlay_config_json,
+                    form_data_json = excluded.form_data_json,
+                    render_style_json = excluded.render_style_json,
+                    updated_at = excluded.updated_at
                 """,
                 (
                     self.template_id,

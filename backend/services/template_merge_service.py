@@ -29,9 +29,10 @@ FIELD_LABELS = {
     "customer_name": "고객명",
     "manager_name": "팀장명",
     "manager_code": "코드",
+    "issue_number": "발행번호",
 }
 
-EXTRACT_FIELD_KEYS = {"customer_name", "manager_name", "manager_code"}
+EXTRACT_FIELD_KEYS = {"customer_name", "manager_name", "manager_code", "issue_number"}
 
 
 def _is_korean_person_name(value: Any) -> bool:
@@ -242,18 +243,44 @@ def _safe_filename_part(value: Any) -> str:
     return (text or "unknown")[:60]
 
 
-def _output_filename(form_data: dict[str, Any]) -> str:
-    base = "_".join(
-        [
-            _safe_filename_part(form_data.get("manager_code")),
-            _safe_filename_part(form_data.get("manager_name")),
-            _safe_filename_part(form_data.get("customer_name")),
-        ]
-    )
+FILENAME_TOKENS = ["manager_code", "issue_number", "manager_name", "customer_name", "date_time"]
+FILENAME_TOKEN_LABELS = {
+    "manager_code": "코드",
+    "issue_number": "발행번호",
+    "manager_name": "팀장명",
+    "customer_name": "고객명",
+    "date_time": "날짜시간",
+}
+DEFAULT_FILENAME_PATTERN = ["manager_code", "manager_name", "customer_name", "date_time"]
+
+
+def _filename_pattern(render_style: dict[str, Any]) -> list[str]:
+    pattern = render_style.get("filename_pattern")
+    if isinstance(pattern, list) and pattern and all(isinstance(token, str) and token in FILENAME_TOKENS for token in pattern):
+        return pattern
+    return DEFAULT_FILENAME_PATTERN
+
+
+def _filename_token_value(token: str, form_data: dict[str, Any]) -> str:
+    if token == "date_time":
+        return datetime.now().strftime("%Y%m%d_%H%M%S")
+    return _safe_filename_part(form_data.get(token))
+
+
+def _output_filename(form_data: dict[str, Any], render_style: dict[str, Any] | None = None) -> str:
+    pattern = _filename_pattern(_default_render_style(render_style or {}))
+    parts = [_filename_token_value(token, form_data) for token in pattern]
+    base = "_".join(part for part in parts if part) or "output"
     candidate = f"{base}.pdf"
     if not (settings.final_output_dir / candidate).exists():
         return candidate
-    return f"{base}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+    # date_time already makes collisions unlikely; this is just a last-resort guard
+    # for two requests landing in the same second (or a pattern without date_time).
+    for suffix in range(2, 100):
+        candidate = f"{base}_{suffix}.pdf"
+        if not (settings.final_output_dir / candidate).exists():
+            return candidate
+    return f"{base}_{datetime.now().strftime('%Y%m%d_%H%M%S%f')}.pdf"
 
 
 def _default_render_style(render_style: dict[str, Any]) -> dict[str, Any]:
@@ -272,6 +299,7 @@ def _default_render_style(render_style: dict[str, Any]) -> dict[str, Any]:
         ],
         "check_stroke_profiles": ["normal", "dark", "light"],
         "pen_textures": ["thin_ballpen", "thick_ballpen", "sign_pen", "weak_ballpen"],
+        "filename_pattern": DEFAULT_FILENAME_PATTERN,
         "keep_style_consistency_per_pdf": True,
         "fax_effect": True,
         "fax_effect_config": {
@@ -745,7 +773,7 @@ def merge_template_pdf(template_id: int, payload: TemplateMergeRequest, document
         }
     merge_form_data = {**output_form_data, "overlays": overlays, "applied_style_profile": profile}
 
-    output_filename = _output_filename(output_form_data) if payload.options.auto_filename else f"template_{template_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+    output_filename = _output_filename(output_form_data, template.render_style) if payload.options.auto_filename else f"template_{template_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
     output_path = settings.final_output_dir / output_filename
     overlay_path = _write_json_tmp(f"template_{template_id}_overlay_", _overlay_config_from_positions(all_positions))
     form_data_path = _write_json_tmp(f"template_{template_id}_form_data_", merge_form_data)

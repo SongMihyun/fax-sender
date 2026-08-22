@@ -19,3 +19,7 @@ pdf-overlay-engine/output/
 pdf-overlay-engine/storage/
 *.sqlite3
 *.sqlite3-journal
+tools/
+faxsender/dist/
+faxsender/public/admin/
+faxsender/*.tsbuildinfo
