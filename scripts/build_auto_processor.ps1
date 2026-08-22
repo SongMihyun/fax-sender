@@ -14,7 +14,6 @@ Set-Location $root
     --paths $root `
     --add-data "backend;backend" `
     --add-data "pdf-overlay-engine;pdf-overlay-engine" `
-    --add-data "pdf-engine;pdf-engine" `
     --add-data "shared;shared" `
     --add-data "tools;tools" `
     --add-data "auto_processor\resources;auto_processor\resources" `
